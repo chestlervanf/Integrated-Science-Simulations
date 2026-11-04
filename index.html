@@ -410,7 +410,7 @@ function beamRect(y,tag){
   el("rect",{x:336,y:y-8,width:510,height:16,fill:css("steel-2"),stroke:css("ink"),"stroke-width":1},bs);
   el("line",{x1:337,y1:y-6.5,x2:845,y2:y-6.5,stroke:css("surface"),"stroke-width":1,opacity:.7},bs);
   el("line",{x1:337,y1:y+6.5,x2:845,y2:y+6.5,stroke:css("steel"),"stroke-width":1},bs);
-  const t=el("text",{x:340,y:y+17,"font-family":F,"font-size":8,fill:css("muted")},bs);t.textContent=tag;
+  const t=el("text",{x:338,y:y+25,"font-family":F,"font-size":8,fill:css("muted")},bs);t.textContent=tag;
 }
 function label(x,y,txt,size){const t=el("text",{x,y,"font-family":F,"font-size":size||10,"font-weight":500,fill:css("ink"),"text-anchor":"middle"},bs);t.textContent=txt}
 // rear beam: 0-100 g, 10 g notches
@@ -436,18 +436,18 @@ const objG=el("g",{},panInner);
 const ridersG=$("#riders");
 function mkRider(key){
   const g=el("g",{tabindex:0,role:"slider",style:"cursor:grab",class:"rider"},ridersG);
+  // rider bodies stay on the beam; grips hang below so the numbers above stay readable
   if(key==="c"){
-    el("rect",{x:-14,y:-20,width:28,height:36,fill:"transparent"},g);
-    el("rect",{x:-6.5,y:-15,width:13,height:5,rx:1.5,fill:css("rider")},g);
-    el("rect",{x:-6.5,y:-10,width:13,height:20,fill:css("surface"),"fill-opacity":.55,stroke:css("ink"),"stroke-width":1.2},g);
-    el("line",{x1:0,y1:-10,x2:0,y2:10,stroke:css("signal"),"stroke-width":1.2},g);
+    el("rect",{x:-14,y:-11,width:28,height:28,fill:"transparent"},g);
+    el("rect",{x:-6.5,y:-9.5,width:13,height:19,fill:css("surface"),"fill-opacity":.35,stroke:css("ink"),"stroke-width":1.2},g);
+    el("line",{x1:0,y1:-9.5,x2:0,y2:9.5,stroke:css("signal"),"stroke-width":1.2},g);
+    el("rect",{x:-6.5,y:9.5,width:13,height:5,rx:1.5,fill:css("rider")},g);
   }else{
-    el("rect",{x:-16,y:-28,width:32,height:40,fill:"transparent"},g);
-    el("rect",{x:-10,y:-10,width:20,height:19,rx:1,fill:"none",stroke:css("rider"),"stroke-width":2},g);
-    el("path",{d:"M-10 -24 Q-10 -27 -7 -27 H7 Q10 -27 10 -24 V-10 H-10 Z",fill:css("rider")},g);
-    for(let k=-6;k<=6;k+=3)el("line",{x1:k,y1:-26,x2:k,y2:-22,stroke:css("steel"),"stroke-width":.8},g);
-    el("path",{d:"M-3.5 -10 L0 -3 L3.5 -10 Z",fill:css("rider")},g);
-    el("line",{x1:0,y1:-20,x2:0,y2:-12,stroke:css("rider-ink"),"stroke-width":1.2},g);
+    el("rect",{x:-14,y:-11,width:28,height:30,fill:"transparent"},g);
+    el("rect",{x:-9,y:-9.5,width:18,height:19,rx:1,fill:"none",stroke:css("rider"),"stroke-width":2},g);
+    el("path",{d:"M-3.5 -9.5 L0 -3 L3.5 -9.5 Z",fill:css("rider")},g);
+    el("path",{d:"M-9 9.5 H9 V15 Q9 17 7 17 H-7 Q-9 17 -9 15 Z",fill:css("rider")},g);
+    for(let k=-6;k<=6;k+=3)el("line",{x1:k,y1:11,x2:k,y2:16,stroke:css("steel"),"stroke-width":.8},g);
   }
   g.setAttribute("aria-label",key==="a"?"100 gram rider":key==="b"?"10 gram rider":"0.1 gram rider");
   return g;
