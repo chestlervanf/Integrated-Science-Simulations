@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Triple Beam Balance</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Libre+Franklin:wght@400;500;600&display=swap">
+<style>
+/* Layout: a printed instrument plate. Paper ground, black ink rules, square edges; the only colour is the red pointer. */
+:root{
+  --bg:#F6F6F4; --surface:#FFFFFF; --ink:#151515; --muted:#5E5E5B; --line:#D2D2CE; --rule:#151515;
+  --steel:#A3A6A3; --steel-2:#DADCD9; --base:#262726; --rider:#262726; --rider-ink:#FFFFFF; --accent:#151515; --accent-ink:#FFFFFF;
+  --signal:#C2382B; --ok:#2F6B3E; --warn:#8A5A00;
+  --display:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --sans:"Libre Franklin","Helvetica Neue",Arial,sans-serif;
+  --mono:var(--sans);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141414; --surface:#1C1C1B; --ink:#ECECE8; --muted:#9C9C97; --line:#33332F; --rule:#ECECE8;
+  --steel:#7C7F7C; --steel-2:#3A3B39; --base:#33352F; --rider:#D9DAD5; --rider-ink:#141414; --accent:#ECECE8; --accent-ink:#141414;
+  --signal:#EA6B5C; --ok:#7DB58A; --warn:#D9A647; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141414; --surface:#1C1C1B; --ink:#ECECE8; --muted:#9C9C97; --line:#33332F; --rule:#ECECE8;
+  --steel:#7C7F7C; --steel-2:#3A3B39; --base:#33352F; --rider:#D9DAD5; --rider-ink:#141414; --accent:#ECECE8; --accent-ink:#141414;
+  --signal:#EA6B5C; --ok:#7DB58A; --warn:#D9A647; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums}
+.wrap{max-width:1080px;margin:0 auto;padding-block:32px 56px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 24px;padding-bottom:12px;border-bottom:2px solid var(--rule)}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(28px,4vw,38px);line-height:1.1;margin:0;letter-spacing:-.01em}
+.lede{max-width:52ch;color:var(--muted);margin:0;font-size:14px}
+.bench{border-bottom:1px solid var(--rule)}
+.bench-in{padding-block:4px 0}
+#bal{width:100%;height:auto;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+.status{font-size:13.5px;padding:8px 0 10px;color:var(--muted);min-height:2.4em}
+.status b{color:var(--ink);font-weight:600}
+.status.warn b{color:var(--warn)}
+.grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:48px;margin-top:28px}
+@media (max-width:820px){.grid{grid-template-columns:1fr;gap:32px}}
+h2{font-family:var(--display);font-weight:600;font-size:20px;margin:0 0 10px}
+.label{font-size:13px;font-weight:600;color:var(--ink);margin:0 0 10px}
+ol.steps{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule)}
+ol.steps li{display:grid;grid-template-columns:36px minmax(0,1fr);gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.sn{font-family:var(--display);font-size:20px;line-height:1.1;color:var(--muted)}
+.st{font-weight:600;font-size:14.5px;color:var(--muted)}
+.sd{color:var(--muted);font-size:14px;margin-top:2px;max-width:60ch}
+.hint{margin-top:6px;font-size:13.5px;color:var(--ink);font-weight:500}
+.hint::before{content:"→ "}
+li.done .sn::after{content:"✓";font-family:var(--sans);font-size:12px;color:var(--ok);margin-left:2px;vertical-align:top}
+li.done .st,li.done .sd{color:var(--muted);opacity:.75}
+li.current .sn,li.current .st{color:var(--ink)}
+li.current .sd{color:var(--ink)}
+.note{margin-top:14px;font-size:13.5px;color:var(--muted);max-width:62ch}
+.note a{color:var(--ink)}
+.panel{display:grid;gap:28px;align-content:start}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:inherit;font-size:13.5px;padding:7px 12px;border:1px solid var(--ink);background:transparent;color:var(--ink);border-radius:0;cursor:pointer;min-height:36px}
+.btn:hover{background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.btn.primary{background:var(--ink);color:var(--bg)}
+.btn.primary:hover{background:color-mix(in srgb,var(--ink) 85%,var(--bg))}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.mag{display:grid;grid-template-columns:auto minmax(0,16ch);gap:12px;align-items:center}
+.magtxt b{color:var(--ink);font-weight:600}
+#magsvg{width:112px;height:auto;display:block;border:1px solid var(--ink);background:var(--surface)}
+.magtxt{font-size:12.5px;line-height:1.4;color:var(--muted)}
+.form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.form label{display:grid;gap:4px;font-size:12.5px;color:var(--muted)}
+.form input{font:inherit;font-size:15px;padding:7px 9px;border:0;border-bottom:1px solid var(--ink);border-radius:0;background:transparent;color:var(--ink);width:100%}
+.form input::placeholder{color:var(--line)}
+.form .total{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end}
+.form input.bad{border-bottom:2px solid var(--signal)} .form input.good{border-bottom:2px solid var(--ok)}
+.fb{font-size:14px;margin-top:12px;min-height:1.4em}
+.fb.ok{color:var(--ok)} .fb.no{color:var(--signal)}
+.sum{font-size:13px;color:var(--muted);margin-top:6px}
+.bar{display:flex;flex-wrap:wrap;gap:14px 32px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-block:12px 14px}
+.controls{display:grid;gap:10px;min-width:0}
+.grp-row{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center}
+.grp{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.grp .k{font-size:12.5px;color:var(--muted);margin-right:4px}
+.btn.sm{font-size:12.5px;padding:2px 9px;min-height:30px;min-width:32px}
+.btn.ghost{border-color:var(--line)}
+select{font:inherit;font-size:13px;padding:4px 26px 4px 8px;min-height:30px;border:1px solid var(--ink);border-radius:0;background:var(--surface);color:var(--ink);max-width:100%}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));max-width:min(560px,calc(100% - 32px));background:var(--ink);color:var(--bg);font-size:13.5px;padding:10px 14px;z-index:20}
+.hit{cursor:help}
+.hit:hover{stroke:var(--signal);stroke-width:1;stroke-dasharray:3 2}
+g.rider:hover rect:last-of-type{stroke:var(--signal)}
+.parttip{position:fixed;z-index:30;pointer-events:none;max-width:240px;background:var(--surface);color:var(--ink);border:1px solid var(--ink);padding:7px 10px;font-size:12.5px;line-height:1.4;display:grid;gap:2px}
+.parttip b{font-weight:600;font-size:13px}
+.parttip span{color:var(--muted)}
+.proc-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.stepnav{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.stepnav span{min-width:8.5ch;text-align:center}
+.pips{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:4px 0 0}
+.pips span{height:3px;background:var(--line)}
+.pips span.done{background:var(--ok)}
+.pips span.cur{background:var(--ink)}
+.pips span.view{outline:1px solid var(--ink);outline-offset:2px}
+ol.steps{border-top:0}
+ol.steps li{border-bottom:1px solid var(--rule);padding:14px 0 16px;min-height:132px}
+.tag{font-size:12px;color:var(--muted);margin-bottom:2px}
+li.done .tag{color:var(--ok)} li.current .tag{color:var(--signal)}
+li.done .st,li.done .sd{opacity:1}
+.scorebar{display:flex;flex-wrap:wrap;gap:6px 20px;align-items:center;font-size:14px}
+.scorebar b{font-weight:600;font-size:16px}
+.sk{color:var(--muted);font-size:12.5px}
+table.card{width:100%;border-collapse:collapse;font-size:13.5px}
+table.card th{text-align:left;font-weight:500;color:var(--muted);font-size:12px;border-bottom:1px solid var(--rule);padding:4px 6px 4px 0}
+table.card td{padding:6px 6px 6px 0;border-bottom:1px solid var(--line)}
+table.card th:nth-child(n+2),table.card td:nth-child(n+2){text-align:right}
+table.card tr.ok td:first-child::before{content:"✓ ";color:var(--ok)}
+table.card tfoot td{color:var(--muted);font-size:12.5px;border-bottom:0}
+.rules{font-size:12.5px;color:var(--muted);margin:10px 0 0;max-width:60ch}
+.ov{display:grid;justify-items:center;padding-block:32px 48px}
+.ovcard{background:var(--surface);border:1px solid var(--ink);border-top:4px solid var(--ink);width:min(440px,100%);padding:24px;display:grid;gap:14px}
+.ovcard.res{width:min(520px,100%)}
+.ovcard h2{margin:0;font-size:26px}
+.ovcard label{display:grid;gap:4px;font-size:12.5px;color:var(--muted)}
+.ovcard input{font:inherit;font-size:16px;padding:7px 2px;border:0;border-bottom:1px solid var(--ink);background:transparent;color:var(--ink);border-radius:0}
+.ovsub{margin:0;color:var(--muted);font-size:14px}
+.ovsmall.err{color:var(--signal)}
+.ovsmall{margin:0;color:var(--muted);font-size:12.5px}
+.big{font-family:var(--display);font-size:56px;line-height:1;font-weight:600}
+.big small{font-family:var(--sans);font-size:15px;font-weight:400;color:var(--muted)}
+header{align-items:center}
+nav.views{display:flex;gap:4px;flex-wrap:wrap}
+nav.views a{font-size:13.5px;color:var(--muted);text-decoration:none;padding:5px 10px;border:1px solid transparent}
+nav.views a:hover{color:var(--ink)}
+nav.views a[aria-current="page"]{color:var(--ink);border-color:var(--ink)}
+#viewSim .scorebar{padding-block:10px;border-bottom:1px solid var(--line)}
+.demobar{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;font-size:14px;padding-block:10px;border-bottom:1px solid var(--line)}
+.demobar b{color:var(--signal);font-weight:600}
+.demobar a{color:var(--ink)}
+.chk{display:flex;gap:6px;align-items:center}
+#demoMass{font-weight:600}
+.view{margin-top:24px}
+.vhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px 20px;margin-bottom:6px}
+.vhead.sub{margin-top:22px}
+.vhead h2{margin:0}
+.vsub{color:var(--muted);font-size:13.5px;margin:6px 0 14px;max-width:70ch}
+.vsub.err{color:var(--signal)}
+.inl{display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--muted)}
+.inl input{font:inherit;font-size:13.5px;padding:4px 6px;min-height:30px;border:1px solid var(--ink);border-radius:0;background:var(--surface);color:var(--ink);width:12ch}
+a.btn{text-decoration:none;display:inline-flex;align-items:center}
+.tblwrap{overflow-x:auto}
+table.lb{min-width:560px}
+table.lb td.rk{font-family:var(--display);font-size:17px;width:3ch}
+table.lb tr.top td.rk{color:var(--signal)}
+table.lb td.nm{font-weight:500}
+table.lb th:nth-child(2),table.lb td:nth-child(2),table.lb th:nth-child(3),table.lb td:nth-child(3){text-align:left}
+.gate{display:grid;gap:12px;justify-items:start;max-width:360px;margin-top:8px}
+.gate h2{margin:0}
+.stats{display:flex;flex-wrap:wrap;gap:8px 36px;padding-block:12px;border-top:1px solid var(--rule);border-bottom:1px solid var(--line);margin-top:10px}
+.stats div{display:grid}
+.stats b{font-family:var(--display);font-size:26px;font-weight:600;line-height:1.1}
+.stats span{font-size:12.5px;color:var(--muted)}
+footer{margin-top:44px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+@media (max-width:460px){.form{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Triple Beam Balance</h1>
+    <nav class="views" aria-label="Views">
+      <a href="#" data-view="sim">Simulation</a>
+      <a href="#leaderboard" data-view="leaderboard">Leaderboard</a>
+      <a href="#teacher" data-view="teacher">Teacher</a>
+    </nav>
+  </header>
+
+  <div id="viewSim">
+  <div class="demobar" id="demobar" hidden>
+    <b>Teacher demo.</b> Nothing is scored or saved.
+    <label class="chk"><input type="checkbox" id="demoReveal"> Show true mass</label>
+    <span id="demoMass"></span>
+    <a href="#teacher">Back to teacher view</a>
+  </div>
+    <div class="scorebar" id="scorebar" hidden>
+      <span><span class="sk">Student</span> <b id="sbName"></b></span>
+      <span><span class="sk">Score</span> <b id="sbScore">0</b><span class="sk"> / 10</span></span>
+      <span><span class="sk">Measured</span> <b id="sbDone">0</b><span class="sk"> / 10</span></span>
+      <span><span class="sk">Time</span> <b id="sbTime">0:00</b></span>
+      <button type="button" class="btn sm" id="finishBtn">Finish</button>
+    </div>
+
+  <div class="ov" id="startOv" hidden>
+    <div class="ovcard" id="startForm">
+      <h2>Triple Beam Balance</h2>
+      <p class="ovsub">Measure all 10 specimens. Each correct reading earns 1 point.</p>
+      <label>Name<input id="stName" required maxlength="40" autocomplete="name"></label>
+      <label>Section<input id="stSec" maxlength="30" placeholder="e.g. 7-Gold"></label>
+      <p class="ovsmall">Steps: calibrate, place a specimen, move the riders to zero, record the readings, check. Return the riders to 0 before removing each specimen.</p>
+      <p class="ovsmall err" id="stErr" hidden>Enter your name to start.</p>
+      <div class="row"><button class="btn primary" type="button" id="startBtn">Start</button><button class="btn" type="button" id="cancelBtn" hidden>Cancel, keep playing</button></div>
+    </div>
+  </div>
+  <div class="ov" id="resOv" hidden>
+    <div class="ovcard res">
+      <p class="ovsmall" id="resDate"></p>
+      <h2 id="resName"></h2>
+      <p class="ovsub" id="resSec"></p>
+      <div class="big"><span id="resScore">0</span><small> / 10 points</small></div>
+      <p class="ovsub" id="resMeta"></p>
+      <table class="card"><thead><tr><th>Specimen</th><th>Mass (g)</th><th>Tries</th><th>Points</th></tr></thead><tbody id="resBody"></tbody></table>
+      <p class="ovsmall" id="saveStatus"></p>
+      <div class="row"><button type="button" class="btn primary" id="submitBtn">Submit score</button><button type="button" class="btn" id="resBack">Back to balance</button><button type="button" class="btn" id="resAgain">Play again</button><a class="btn" href="#leaderboard" id="resBoard">Leaderboard</a></div>
+    </div>
+  </div>
+  <div class="bench"><div class="bench-in">
+    <svg id="bal" viewBox="0 50 960 352" role="img" aria-label="Triple beam balance">
+      <g id="fixedBack"></g>
+      <g id="beamGroup">
+        <g id="beamStatic"></g>
+        <g id="panGroup"></g>
+        <g id="riders"></g>
+      </g>
+      <g id="fixedFront"></g>
+    </svg>
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="bar">
+      <div class="controls">
+        <div class="grp"><span class="k">Specimen</span>
+          <select id="specSel" aria-label="Choose a specimen"></select>
+          <button type="button" class="btn sm primary" id="placeBtn">Place</button>
+          <button type="button" class="btn sm" id="removeBtn">Remove</button>
+          <button type="button" class="btn sm ghost" id="shuffleBtn" title="Start over with new hidden masses">Restart</button>
+        </div>
+        <div class="grp-row">
+          <div class="grp"><span class="k">Knob</span><button type="button" class="btn sm" id="knobL" aria-label="Turn knob left, pointer goes down">↺</button><button type="button" class="btn sm" id="knobR" aria-label="Turn knob right, pointer goes up">↻</button></div>
+          <div class="grp"><span class="k">100 g</span><button type="button" class="btn sm" data-r="a" data-d="-1" aria-label="100 gram rider one notch left">◀</button><button type="button" class="btn sm" data-r="a" data-d="1" aria-label="100 gram rider one notch right">▶</button></div>
+          <div class="grp"><span class="k">10 g</span><button type="button" class="btn sm" data-r="b" data-d="-1" aria-label="10 gram rider one notch left">◀</button><button type="button" class="btn sm" data-r="b" data-d="1" aria-label="10 gram rider one notch right">▶</button></div>
+          <div class="grp"><span class="k">0.1 g</span><button type="button" class="btn sm" data-r="c" data-d="-10" aria-label="Front rider 0.1 gram left">◀</button><button type="button" class="btn sm" data-r="c" data-d="10" aria-label="Front rider 0.1 gram right">▶</button></div>
+          <button type="button" class="btn sm ghost" id="zeroBtn">Riders to 0</button>
+        </div>
+      </div>
+      <div class="mag">
+        <svg id="magsvg" viewBox="0 0 170 120" aria-label="Magnified pointer and zero mark"></svg>
+        <div class="magtxt"><b>Pointer, ×10</b><br>Stop when the red tip meets the long zero line.</div>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="grid">
+    <section>
+      <div class="proc-head">
+        <h2>Procedure</h2>
+        <div class="stepnav">
+          <button type="button" class="btn sm" id="stepPrev" aria-label="Previous step">◀</button>
+          <span id="stepCount" aria-live="polite">Step 1 of 6</span>
+          <button type="button" class="btn sm" id="stepNext" aria-label="Next step">▶</button>
+        </div>
+      </div>
+      <div class="pips" id="pips" aria-hidden="true"></div>
+      <ol class="steps" id="steps"></ol>
+    </section>
+
+    <section class="panel">
+      <div>
+        <p class="label">Step 6 · Record your readings (g)</p>
+        <div class="form">
+          <label>100 g beam<input id="in100" inputmode="decimal" autocomplete="off" placeholder="e.g. 200"></label>
+          <label>10 g beam<input id="in10" inputmode="decimal" autocomplete="off" placeholder="e.g. 40"></label>
+          <label>Front beam<input id="in01" inputmode="decimal" autocomplete="off" placeholder="e.g. 6.3"></label>
+          <div class="total">
+            <label>Mass of object (sum)<input id="inTot" inputmode="decimal" autocomplete="off" placeholder="e.g. 246.3"></label>
+            <button class="btn primary" id="checkBtn">Check reading</button>
+          </div>
+        </div>
+        <div class="sum" id="sumLine"></div>
+        <div class="fb" id="fb" aria-live="polite"></div>
+      </div>
+      <div>
+        <p class="label">Scorecard</p>
+        <table class="card"><thead><tr><th>Specimen</th><th>Mass (g)</th><th>Tries</th><th>Points</th></tr></thead><tbody id="cardBody"></tbody>
+        <tfoot><tr><td colspan="3">Procedure errors <span id="penN">0</span> × −0.5</td><td id="penPts">0</td></tr></tfoot></table>
+        <p class="rules">1 point for each specimen measured correctly. Removing an object before returning the riders, or weighing on an uncalibrated balance, costs 0.5 point.</p>
+      </div>
+    </section>
+  </div>
+  </div><!-- /viewSim -->
+
+  <section id="viewBoard" class="view" hidden>
+    <div class="vhead">
+      <h2>Leaderboard</h2>
+      <div class="row"><label class="inl">Section <select id="lbSec"><option value="">All sections</option></select></label><button type="button" class="btn sm" id="lbRefresh">Refresh</button></div>
+    </div>
+    <p class="vsub">Best game per student. Ranked by points, then by the fastest time.</p>
+    <div class="tblwrap"><table class="card lb" id="lbTable"></table></div>
+    <p class="vsub" id="lbStatus"></p>
+  </section>
+
+  <section id="viewTeacher" class="view" hidden>
+    <div id="gate" class="gate">
+      <h2>Teacher view</h2>
+      <label class="inl">Teacher PIN <input id="pinIn" type="password" inputmode="numeric" autocomplete="off" maxlength="20"></label>
+      <button type="button" class="btn primary" id="pinBtn">Open</button>
+      <p class="vsub err" id="pinErr" hidden>That PIN is not correct.</p>
+    </div>
+    <div id="tview" hidden>
+      <div class="vhead">
+        <h2>Teacher view</h2>
+        <div class="row"><a class="btn sm primary" href="#demo">Open demo simulation</a><button type="button" class="btn sm" id="tLock">Lock</button></div>
+      </div>
+      <div class="stats" id="tStats"></div>
+      <div class="vhead sub">
+        <div class="row">
+          <label class="inl">Section <select id="tSec"><option value="">All sections</option></select></label>
+          <label class="inl">Show <select id="tMode"><option value="best">Best game per student</option><option value="all">Every submitted game</option></select></label>
+          <label class="inl">Search <input id="tSearch" placeholder="Name" autocomplete="off"></label>
+        </div>
+        <div class="row"><button type="button" class="btn sm" id="tRefresh">Refresh</button><button type="button" class="btn sm" id="tCopy">Copy table</button><button type="button" class="btn sm" id="tCsv">Download CSV</button></div>
+      </div>
+      <div class="tblwrap"><table class="card lb" id="tTable"></table></div>
+      <p class="vsub" id="tStatus"></p>
+      <p class="vsub">To delete test or duplicate entries, open the <b>tbb_scores</b> table in your Supabase dashboard (Table Editor).</p>
+    </div>
+  </section>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <div class="parttip" id="parttip" hidden></div>
+  <footer>Capacity 610 g · readability 0.1 g · center beam 0–500 g in 100 g notches · rear beam 0–100 g in 10 g notches · front beam 0–10 g, no notches.</footer>
+</div>
+
+<script>
+/* ===== SETTINGS: fill these in after setting up Supabase ===== */
+const CONFIG={
+  SUPABASE_URL:"https://rnbacmatfibpwiutgpup.supabase.co",          // e.g. "https://abcdefgh.supabase.co"
+  SUPABASE_KEY:"sb_publishable_ErG2BdS33jeCm_kN_AHk9w_Z1Zk2_4f",          // the project's anon / publishable key (safe to share)
+  TEACHER_PIN:"211730"
+};
+/* ============================================================ */
+(function(){
+const NS="http://www.w3.org/2000/svg";
+const $=s=>document.querySelector(s);
+const svg=$("#bal");
+// units: 1 unit = 0.01 g
+const X0=360,X1=820,W=X1-X0,PIV={x:300,y:230},MAXA=3;
+const BY={b:172,a:222,c:272};
+let toastT;function toast(m){const t=document.getElementById("toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,4500)}
+const SPECS=[
+  {id:"eraser",name:"Rubber eraser",lo:18,hi:29},
+  {id:"bolt",name:"Steel bolt",lo:32,hi:61},
+  {id:"wood",name:"Wooden block",lo:44,hi:78},
+  {id:"beaker",name:"250 mL beaker",lo:96,hi:119},
+  {id:"rock",name:"Granite sample",lo:140,hi:265},
+  {id:"brass",name:"Brass cylinder",lo:280,hi:345},
+  {id:"marble",name:"Glass marble",lo:4,hi:7},
+  {id:"stopper",name:"Rubber stopper",lo:8,hi:16},
+  {id:"alum",name:"Aluminum cylinder",lo:24,hi:42},
+  {id:"unknown",name:"Unknown solid X",lo:5,hi:598}
+];
+let S={a:0,b:0,c:0,offset:0,obj:null,checked:false,theta:0,vel:0};
+function rnd(lo,hi){return Math.round((lo+Math.random()*(hi-lo))*10)*10}
+function newOffset(){let v=(3+Math.floor(Math.random()*8))*10;return Math.random()<.5?-v:v}
+function shuffle(){SPECS.forEach(s=>s.mass=rnd(s.lo,s.hi))}
+shuffle(); S.offset=newOffset();
+
+const el=(tag,attrs,parent)=>{const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e};
+const css=v=>`var(--${v})`;
+
+// ---------- fixed parts (OHAUS 700-series style) ----------
+const back=$("#fixedBack"),front=$("#fixedFront"),bs=$("#beamStatic");
+const F="Libre Franklin, Arial, sans-serif";
+el("line",{x1:20,y1:396,x2:940,y2:396,stroke:css("line"),"stroke-width":1},back);
+// cast base: one body, raised at the pan end and the pointer tower
+el("rect",{x:58,y:390,width:44,height:7,rx:2,fill:css("base")},back);
+el("rect",{x:860,y:390,width:44,height:7,rx:2,fill:css("base")},back);
+el("path",{d:"M40 392 V366 Q40 350 60 347 L250 340 Q300 337 350 342 L880 348 Q940 351 940 370 V392 Z",fill:css("base")},back);
+el("path",{d:"M48 356 Q52 350 64 349 L250 342 Q300 339 350 344 L878 350 Q930 352 934 362",fill:"none",stroke:css("steel"),"stroke-width":1,opacity:.7},back);
+const brand=el("text",{x:560,y:374,"font-family":F,"font-size":10,"letter-spacing":"3",fill:css("steel"),"text-anchor":"middle"},back);brand.textContent="TRIPLE BEAM BALANCE · 610 g × 0.1 g";
+// centre column and agate bearing
+el("path",{d:"M280 344 L289 250 H311 L320 344 Z",fill:css("base")},back);
+el("rect",{x:286,y:240,width:28,height:12,rx:2,fill:css("steel"),stroke:css("ink"),"stroke-width":1},back);
+// magnetic damper housing under the beam's right end
+el("path",{d:"M792 346 V300 H806 V332 H834 V300 H848 V346 Z",fill:css("base")},back);
+el("rect",{x:806,y:330,width:28,height:4,fill:css("signal"),opacity:.55},back);
+// pointer tower and zero scale
+el("path",{d:"M908 348 V206 Q908 196 918 196 H926 Q936 196 936 206 V348 Z",fill:css("base")},back);
+el("rect",{x:896,y:186,width:38,height:90,rx:3,fill:css("surface"),stroke:css("ink"),"stroke-width":1},back);
+for(let i=-5;i<=5;i++){const y=230+i*8;el("line",{x1:898,y1:y,x2:i===0?926:i%5===0?914:908,y2:y,stroke:css("ink"),"stroke-width":i===0?1.6:0.7},back)}
+const zt=el("text",{x:931,y:227,"font-family":F,"font-size":9,"font-weight":600,fill:css("ink"),"text-anchor":"end"},back);zt.textContent="0";
+
+// ---------- beam assembly (rotates) ----------
+// arm from the pan bracket to the beam frame
+el("path",{d:"M108 225 H322 V235 H108 Z",fill:css("steel"),stroke:css("ink"),"stroke-width":1},bs);
+el("rect",{x:138,y:219,width:24,height:22,rx:3,fill:css("base")},bs);
+// knife edge resting on the bearing
+el("path",{d:"M300 240 l-7 -8 h14 z",fill:css("ink")},bs);
+// beam frame end plates
+el("path",{d:"M320 156 H336 V288 H320 Z",fill:css("steel"),stroke:css("ink"),"stroke-width":1},bs);
+el("path",{d:"M846 156 H858 Q862 156 862 160 V284 Q862 288 858 288 H846 Z",fill:css("steel"),stroke:css("ink"),"stroke-width":1},bs);
+// damper vane hanging into the magnets
+el("rect",{x:816,y:286,width:8,height:40,fill:css("steel"),stroke:css("ink"),"stroke-width":.8},bs);
+// zero adjustment knob, knurled
+const knob=el("g",{},bs);
+el("rect",{x:80,y:219,width:30,height:22,rx:4,fill:css("base")},knob);
+el("rect",{x:76,y:222,width:6,height:16,rx:2,fill:css("base")},knob);
+const knobLines=el("g",{},knob);
+// pointer needle
+el("path",{d:"M862 227 L906 229.4 L906 230.6 L862 233 Z",fill:css("ink")},bs);
+el("path",{d:"M898 227.5 L912 230 L898 232.5 Z",fill:css("signal")},bs);
+
+function beamRect(y,tag){
+  el("rect",{x:336,y:y-8,width:510,height:16,fill:css("steel-2"),stroke:css("ink"),"stroke-width":1},bs);
+  el("line",{x1:337,y1:y-6.5,x2:845,y2:y-6.5,stroke:css("surface"),"stroke-width":1,opacity:.7},bs);
+  el("line",{x1:337,y1:y+6.5,x2:845,y2:y+6.5,stroke:css("steel"),"stroke-width":1},bs);
+  const t=el("text",{x:340,y:y+17,"font-family":F,"font-size":8,fill:css("muted")},bs);t.textContent=tag;
+}
+function label(x,y,txt,size){const t=el("text",{x,y,"font-family":F,"font-size":size||10,"font-weight":500,fill:css("ink"),"text-anchor":"middle"},bs);t.textContent=txt}
+// rear beam: 0-100 g, 10 g notches
+beamRect(BY.b,"×10 g");
+for(let i=0;i<=10;i++){const x=X0+i*W/10;el("path",{d:`M${x-3.5} ${BY.b-8} L${x} ${BY.b-2.5} L${x+3.5} ${BY.b-8}`,fill:css("bg"),stroke:css("ink"),"stroke-width":.8},bs);if(i)label(x,BY.b-12,i*10)}
+// centre beam: 0-500 g, 100 g notches
+beamRect(BY.a,"×100 g");
+for(let i=0;i<=5;i++){const x=X0+i*W/5;el("path",{d:`M${x-4.5} ${BY.a-8} L${x} ${BY.a-1.5} L${x+4.5} ${BY.a-8}`,fill:css("bg"),stroke:css("ink"),"stroke-width":.8},bs);if(i)label(x,BY.a-12,i*100)}
+// front beam: 0-10 g, 0.1 g graduations, no notches
+beamRect(BY.c,"0.1 g");
+for(let i=0;i<=100;i++){const x=X0+i*W/100;const L=i%10===0?13:i%5===0?8:4.5;el("line",{x1:x,y1:BY.c+8,x2:x,y2:BY.c+8-L,stroke:css("ink"),"stroke-width":i%10===0?.9:.45},bs);if(i%10===0&&i)label(x,BY.c-12,i/10)}
+const gt=el("text",{x:836,y:BY.c-12,"font-family":F,"font-size":8,fill:css("muted"),"text-anchor":"end"},bs);gt.textContent="";
+
+// pan (kept level by counter-rotation)
+const pan=$("#panGroup");
+const panInner=el("g",{},pan);
+el("path",{d:"M140 128 L146 140 V226 H154 V140 L160 128 Z",fill:css("steel"),stroke:css("ink"),"stroke-width":1},panInner);
+el("path",{d:"M66 114 Q72 130 96 131 H204 Q228 130 234 114 Z",fill:css("steel"),stroke:css("ink"),"stroke-width":1},panInner);
+el("ellipse",{cx:150,cy:114,rx:84,ry:5.5,fill:css("steel-2"),stroke:css("ink"),"stroke-width":1},panInner);
+const objG=el("g",{},panInner);
+
+// riders
+const ridersG=$("#riders");
+function mkRider(key){
+  const g=el("g",{tabindex:0,role:"slider",style:"cursor:grab",class:"rider"},ridersG);
+  if(key==="c"){
+    el("rect",{x:-14,y:-20,width:28,height:36,fill:"transparent"},g);
+    el("rect",{x:-6.5,y:-15,width:13,height:5,rx:1.5,fill:css("rider")},g);
+    el("rect",{x:-6.5,y:-10,width:13,height:20,fill:css("surface"),"fill-opacity":.55,stroke:css("ink"),"stroke-width":1.2},g);
+    el("line",{x1:0,y1:-10,x2:0,y2:10,stroke:css("signal"),"stroke-width":1.2},g);
+  }else{
+    el("rect",{x:-16,y:-28,width:32,height:40,fill:"transparent"},g);
+    el("rect",{x:-10,y:-10,width:20,height:19,rx:1,fill:"none",stroke:css("rider"),"stroke-width":2},g);
+    el("path",{d:"M-10 -24 Q-10 -27 -7 -27 H7 Q10 -27 10 -24 V-10 H-10 Z",fill:css("rider")},g);
+    for(let k=-6;k<=6;k+=3)el("line",{x1:k,y1:-26,x2:k,y2:-22,stroke:css("steel"),"stroke-width":.8},g);
+    el("path",{d:"M-3.5 -10 L0 -3 L3.5 -10 Z",fill:css("rider")},g);
+    el("line",{x1:0,y1:-20,x2:0,y2:-12,stroke:css("rider-ink"),"stroke-width":1.2},g);
+  }
+  g.setAttribute("aria-label",key==="a"?"100 gram rider":key==="b"?"10 gram rider":"0.1 gram rider");
+  return g;
+}
+const R={a:mkRider("a"),b:mkRider("b"),c:mkRider("c")};
+const riderX={a:v=>X0+v*W/5,b:v=>X0+v*W/10,c:v=>X0+v/1000*W};
+const LIM={a:5,b:10,c:1000};
+
+// part labels on hover
+const PARTS={
+  pan:["Pan","Holds the object being weighed. Place the object at its center."],
+  post:["Pan support","Holds the pan level on the left end of the beam."],
+  rear:["Rear beam (10 g)","Reads 0 to 100 g in 10 g notches."],
+  center:["Center beam (100 g)","Reads 0 to 500 g in 100 g notches."],
+  front:["Front beam (0.1 g)","Reads 0 to 10 g in 0.1 g divisions. It has no notches."],
+  ra:["100 g rider","Slides along the center beam and rests in a notch."],
+  rb:["10 g rider","Slides along the rear beam and rests in a notch."],
+  rc:["0.1 g rider","Slides freely along the front beam. Push it with a pencil or fingertip."],
+  pointer:["Pointer","Moves up or down to show whether the beam is balanced."],
+  zero:["Zero mark","Fixed scale. The balance is level when the pointer lines up with 0."],
+  knob:["Zero adjustment knob","Turn it to calibrate, so the pointer reads zero with an empty pan."],
+  pivot:["Pivot (fulcrum)","The knife edge on an agate bearing. The whole beam swings on this point."],
+  damper:["Magnetic damper","A vane between two magnets. It slows the beam so the pointer settles quickly."],
+  base:["Base","Keeps the balance steady. Set it on a flat, level table."]
+};
+const hit=(parent,attrs,part)=>{const e=el(attrs.d?"path":"rect",Object.assign({fill:"transparent",class:"hit"},attrs),parent);e.dataset.part=part;return e};
+hit(back,{d:"M40 392 V366 Q40 350 60 347 L250 340 Q300 337 350 342 L880 348 Q940 351 940 370 V392 Z"},"base");
+hit(back,{d:"M792 346 V300 H848 V346 Z"},"damper");
+hit(back,{d:"M280 344 L289 250 H286 V240 H314 V250 H311 L320 344 Z"},"pivot");
+hit(back,{x:896,y:186,width:40,height:162},"zero");
+hit(bs,{x:336,y:BY.b-8,width:510,height:16},"rear");
+hit(bs,{x:336,y:BY.a-8,width:510,height:16},"center");
+hit(bs,{x:336,y:BY.c-8,width:510,height:16},"front");
+hit(bs,{x:860,y:222,width:52,height:16},"pointer");
+hit(bs,{x:74,y:217,width:38,height:26},"knob");
+hit(panInner,{d:"M140 128 L146 140 V226 H154 V140 L160 128 Z"},"post");
+hit(panInner,{x:62,y:60,width:176,height:72},"pan");
+R.a.dataset.part="ra";R.b.dataset.part="rb";R.c.dataset.part="rc";
+const tip=document.getElementById("parttip");
+function showTip(part,x,y){const d=PARTS[part];if(!d)return;tip.innerHTML=`<b>${d[0]}</b><span>${d[1]}</span>`;tip.hidden=false;
+  const w=tip.offsetWidth,h=tip.offsetHeight;let lx=x+14,ly=y+16;if(lx+w>innerWidth-8)lx=x-w-14;if(ly+h>innerHeight-8)ly=y-h-12;tip.style.left=Math.max(8,lx)+"px";tip.style.top=Math.max(8,ly)+"px"}
+let tipT;
+const hideTip=()=>{tip.hidden=true;clearTimeout(tipT)};
+const partAt=e=>{const t=e.target&&e.target.closest?e.target.closest("#bal [data-part]"):null;return t};
+document.addEventListener("pointermove",e=>{const t=partAt(e);if(t&&!(e.buttons&&e.pointerType!=="mouse"))showTip(t.dataset.part,e.clientX,e.clientY);else hideTip()},{passive:true});
+document.addEventListener("pointerdown",e=>{if(e.pointerType==="mouse")return;const t=partAt(e);if(!t){hideTip();return}showTip(t.dataset.part,e.clientX,e.clientY);clearTimeout(tipT);tipT=setTimeout(hideTip,2500)});
+document.addEventListener("mouseout",e=>{if(!e.relatedTarget)hideTip()});
+document.documentElement.addEventListener("mouseleave",hideTip);
+window.addEventListener("blur",hideTip);
+window.addEventListener("scroll",hideTip,{passive:true});
+
+// drag
+function svgX(evt){const p=svg.createSVGPoint();p.x=evt.clientX;p.y=evt.clientY;return p.matrixTransform(svg.getScreenCTM().inverse()).x}
+Object.keys(R).forEach(k=>{
+  const g=R[k];let drag=false;
+  g.addEventListener("pointerdown",e=>{drag=true;g.setPointerCapture(e.pointerId);g.style.cursor="grabbing";e.preventDefault()});
+  g.addEventListener("pointermove",e=>{if(!drag)return;const t=(svgX(e)-X0)/W;let v=k==="c"?Math.round(t*1000):Math.round(t*LIM[k]);setRider(k,v)});
+  const end=()=>{drag=false;g.style.cursor="grab"};
+  g.addEventListener("pointerup",end);g.addEventListener("pointercancel",end);
+  g.addEventListener("keydown",e=>{
+    let d=0;if(e.key==="ArrowRight"||e.key==="ArrowUp")d=1;else if(e.key==="ArrowLeft"||e.key==="ArrowDown")d=-1;else return;
+    e.preventDefault();if(k==="c")d*=e.shiftKey?1:10;setRider(k,S[k]+d)});
+});
+function setRider(k,v){v=Math.max(0,Math.min(LIM[k],v));if(v===S[k])return;S[k]=v;S.checked=false;update()}
+document.querySelectorAll("[data-r]").forEach(b=>b.addEventListener("click",()=>setRider(b.dataset.r,S[b.dataset.r]+Number(b.dataset.d))));
+$("#zeroBtn").onclick=()=>{S.a=S.b=S.c=0;S.checked=false;update()};
+$("#knobL").onclick=()=>{S.offset-=10;knobTurn-=30;update()};
+$("#knobR").onclick=()=>{S.offset+=10;knobTurn+=30;update()};
+let knobTurn=0;
+
+// objects
+function objSVG(id){
+  const s="stroke:var(--ink);stroke-width:1";
+  switch(id){
+    case"eraser":return`<rect x="128" y="100" width="44" height="16" rx="3" style="fill:var(--surface);${s}"/><rect x="128" y="100" width="18" height="16" rx="3" style="fill:var(--accent);opacity:.55;${s}"/>`;
+    case"bolt":return`<rect x="112" y="104" width="12" height="12" style="fill:var(--steel);${s}"/><rect x="124" y="107" width="62" height="6" style="fill:var(--steel-2);${s}"/>${[0,1,2,3,4,5,6,7].map(i=>`<line x1="${132+i*7}" y1="107" x2="${135+i*7}" y2="113" style="${s};stroke-width:.6"/>`).join("")}`;
+    case"wood":return`<rect x="118" y="88" width="64" height="28" style="fill:var(--steel-2);${s}"/><path d="M122 96 q20 -4 56 2 M122 104 q24 4 56 -1 M122 111 q18 -3 56 1" style="fill:none;${s};stroke-width:.6"/>`;
+    case"beaker":return`<path d="M124 62 h52 v4 h-3 v46 q0 4 -4 4 h-38 q-4 0 -4 -4 v-46 h-3 z" style="fill:var(--surface);fill-opacity:.35;${s}"/>${[0,1,2,3].map(i=>`<line x1="129" y1="${80+i*8}" x2="137" y2="${80+i*8}" style="${s};stroke-width:.6"/>`).join("")}`;
+    case"rock":return`<path d="M112 116 L116 96 L132 84 L156 82 L178 92 L190 108 L186 116 Z" style="fill:var(--steel);${s}"/><circle cx="140" cy="98" r="2" style="fill:var(--ink)"/><circle cx="162" cy="104" r="1.6" style="fill:var(--surface)"/><circle cx="150" cy="92" r="1.4" style="fill:var(--ink)"/><circle cx="172" cy="98" r="1.2" style="fill:var(--surface)"/>`;
+    case"brass":return`<rect x="132" y="70" width="36" height="46" style="fill:var(--warn);opacity:.85;${s}"/><ellipse cx="150" cy="70" rx="18" ry="4" style="fill:var(--warn);${s}"/>`;
+    case"marble":return`<circle cx="150" cy="108" r="8" style="fill:var(--accent);fill-opacity:.25;${s}"/><path d="M145 104 q3 -3 7 -1" style="fill:none;stroke:var(--surface);stroke-width:1.2"/>`;
+    case"stopper":return`<path d="M134 116 L138 94 H162 L166 116 Z" style="fill:var(--base);${s}"/><ellipse cx="150" cy="94" rx="12" ry="2.5" style="fill:var(--steel);${s}"/>`;
+    case"alum":return`<rect x="136" y="84" width="28" height="32" style="fill:var(--steel-2);${s}"/><ellipse cx="150" cy="84" rx="14" ry="3" style="fill:var(--surface);${s}"/><line x1="142" y1="88" x2="142" y2="114" style="stroke:var(--surface);stroke-width:2;opacity:.8"/>`;
+    default:return`<rect x="128" y="86" width="44" height="30" style="fill:var(--base);${s}"/><text x="150" y="107" text-anchor="middle" font-family="Newsreader, serif" font-size="18" style="fill:var(--surface)">?</text>`;
+  }
+}
+
+// specimen dropdown
+const sel=$("#specSel");
+SPECS.forEach(sp=>{const o=document.createElement("option");o.value=sp.id;sel.appendChild(o)});
+function renderTray(){[...sel.options].forEach((o,i)=>o.textContent=(G.res[SPECS[i].id]&&G.res[SPECS[i].id].done?"✓ ":"")+SPECS[i].name+(S.obj&&S.obj.id===SPECS[i].id?" (on pan)":""));$("#placeBtn").disabled=!!(S.obj&&S.obj.id===sel.value)}
+sel.addEventListener("change",renderTray);
+$("#placeBtn").onclick=()=>placeObj(SPECS.find(x=>x.id===sel.value));
+let flash="";
+function placeObj(sp){
+  if(S.obj&&S.obj.id===sp.id)return;
+  if(S.obj){flash="Remove the current object first. Return the riders to 0 before you take it off.";update();return}
+  S.obj={id:sp.id,name:sp.name,mass:sp.mass};S.checked=false;clearForm();
+  if(S.offset!==0){flash="The balance was not calibrated. Remove the object and do Step 1 first.";update();penalty("cal","Weighing on an uncalibrated balance.");return}
+  update();
+}
+$("#removeBtn").onclick=()=>{
+  if(!S.obj)return;
+  if(S.a||S.b||S.c){penalty("rm","Return the riders to 0 before removing the object.");flash="Return all riders to their original position (0) before removing the object.";update();return}
+  S.obj=null;S.checked=false;clearForm();update();
+};
+$("#shuffleBtn").onclick=()=>{$("#stName").value=G.name||"";$("#stSec").value=G.sec||"";$("#cancelBtn").hidden=!G.t0;$("#startBtn").textContent=G.t0?"Start new game":"Start";$("#startOv").hidden=false;$("#stName").focus()};
+$("#cancelBtn").onclick=()=>{$("#startOv").hidden=true};
+// ---------- game ----------
+const G={name:"",sec:"",t0:0,t1:0,res:{},pen:0,over:false,saved:false,saving:false,demo:false};
+function penalty(key,msg){if(!G.t0||G.over||!S.obj)return;S.obj.pen=S.obj.pen||{};if(S.obj.pen[key])return;S.obj.pen[key]=1;G.pen++;toast(msg+" −0.5 point.");renderGame()}
+function score(){let t=0;for(const k in G.res)if(G.res[k].done)t+=G.res[k].pts;return Math.max(0,Math.round((t-G.pen*0.5)*10)/10)}
+const fmtS=x=>Number.isInteger(+x)?String(+x):(+x).toFixed(1);
+function fmtT(ms){const s=Math.floor(ms/1000);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+function rows(){return SPECS.map(sp=>{const r=G.res[sp.id]||{tries:0};return `<tr class="${r.done?"ok":""}"><td>${sp.name}</td><td>${r.done?(sp.mass/100).toFixed(1):"—"}</td><td>${r.tries||"—"}</td><td>${r.done?r.pts:"—"}</td></tr>`}).join("")}
+function renderGame(){
+  const n=Object.values(G.res).filter(r=>r.done).length;
+  $("#sbName").textContent=G.name;$("#sbScore").textContent=fmtS(score());$("#sbDone").textContent=n;
+  $("#cardBody").innerHTML=rows();$("#penN").textContent=G.pen;$("#penPts").textContent=G.pen?"−"+fmtS(G.pen*0.5):"0";
+}
+function startGame(name,sec){
+  Object.assign(G,{name,sec,t0:Date.now(),t1:0,res:{},pen:0,over:false,saved:false,saving:false,demo:false});
+  shuffle();S.obj=null;S.a=S.b=S.c=0;S.offset=newOffset();S.checked=false;clearForm();
+  $("#scorebar").hidden=false;$("#startOv").hidden=true;$("#resOv").hidden=true;renderGame();update();
+}
+function tryStart(){const n=$("#stName").value.trim();if(!n){$("#stErr").hidden=false;$("#stName").focus();return}$("#stErr").hidden=true;startGame(n,$("#stSec").value.trim())}
+$("#startBtn").addEventListener("click",tryStart);
+["#stName","#stSec"].forEach(q=>$(q).addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();tryStart()}}));
+function showResults(){
+  if(!G.t1)G.t1=Date.now();
+  const n=Object.values(G.res).filter(r=>r.done).length;
+  $("#resDate").textContent=new Date().toLocaleString();
+  $("#resName").textContent=G.name;$("#resSec").textContent=G.sec?"Section "+G.sec:"";
+  $("#resScore").textContent=fmtS(score());
+  $("#resMeta").textContent=`${n} of 10 specimens measured · ${G.pen} procedure error${G.pen===1?"":"s"} · time ${fmtT(G.t1-G.t0)}`;
+  $("#resBody").innerHTML=rows();$("#resOv").hidden=false;renderSave();
+}
+// ---------- Supabase ----------
+const DB_ON=!!(CONFIG.SUPABASE_URL&&CONFIG.SUPABASE_KEY);
+function sbHeaders(){const h={"apikey":CONFIG.SUPABASE_KEY,"Content-Type":"application/json"};if(!CONFIG.SUPABASE_KEY.startsWith("sb_"))h.Authorization="Bearer "+CONFIG.SUPABASE_KEY;return h}
+const API=()=>CONFIG.SUPABASE_URL.replace(/\/+$/,"")+"/rest/v1/tbb_scores";
+function renderSave(){
+  const st=$("#saveStatus"),b=$("#submitBtn");
+  if(!DB_ON){st.textContent="The leaderboard is not connected. Take a screenshot of this card and submit it to your teacher.";b.hidden=true;return}
+  if(G.saved){st.textContent="Score saved to the leaderboard.";b.hidden=true;return}
+  if(G.saving){st.textContent="Saving…";b.hidden=false;b.disabled=true;return}
+  b.hidden=false;b.disabled=false;
+  st.textContent=G.over?(G.saveErr||"Your score has not been saved yet."):"Submitting ends this game. You can't add more specimens after.";
+}
+async function submitScore(){
+  if(!DB_ON||G.saved||G.saving||!G.t0||G.demo)return;
+  if(!G.t1)G.t1=Date.now();G.over=true;G.saving=true;G.saveErr="";renderSave();
+  const measured=Object.values(G.res).filter(r=>r.done).length;
+  const details=SPECS.map(sp=>{const r=G.res[sp.id]||{};return{s:sp.name,m:r.done?sp.mass/100:null,t:r.tries||0,p:r.done?r.pts:0}});
+  const row={name:G.name.slice(0,40),section:(G.sec||"").slice(0,30),score:score(),time_ms:Math.round(G.t1-G.t0),measured,errors:G.pen,details};
+  try{
+    const r=await fetch(API(),{method:"POST",headers:Object.assign(sbHeaders(),{"Prefer":"return=minimal"}),body:JSON.stringify(row)});
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    G.saved=true;
+  }catch(e){G.saveErr="Could not save your score. Check the internet connection and press Submit score again."}
+  G.saving=false;renderSave();
+}
+$("#submitBtn").onclick=submitScore;
+async function fetchScores(){
+  const r=await fetch(API()+"?select=id,created_at,name,section,score,time_ms,measured,errors,details&order=score.desc,time_ms.asc,created_at.asc&limit=2000",{headers:sbHeaders()});
+  if(!r.ok)throw new Error("HTTP "+r.status);
+  return r.json();
+}
+const key=r=>(r.name||"").trim().toLowerCase()+"|"+(r.section||"").trim().toLowerCase();
+function bestPer(rows){const m=new Map(),n=new Map();for(const r of rows){const k=key(r);n.set(k,(n.get(k)||0)+1);if(!m.has(k))m.set(k,r)}return [...m.values()].map(r=>Object.assign({},r,{games:n.get(key(r))}))}
+const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtD=iso=>{const d=new Date(iso);return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" "+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})};
+function boardHTML(rows,teacher){
+  if(!rows.length)return `<tbody><tr><td>No scores yet.</td></tr></tbody>`;
+  const head=`<thead><tr><th>#</th><th>Name</th><th>Section</th><th>Points</th><th>Time</th><th>Measured</th><th>Errors</th>${teacher?"<th>Games</th><th>Played</th>":""}</tr></thead>`;
+  return head+"<tbody>"+rows.map((r,i)=>`<tr class="${i<3?"top":""}"><td class="rk">${i+1}</td><td class="nm">${esc(r.name)}</td><td>${esc(r.section)||"—"}</td><td><b>${fmtS(r.score)}</b></td><td>${fmtT(r.time_ms)}</td><td>${r.measured}/10</td><td>${r.errors}</td>${teacher?`<td>${r.games??1}</td><td>${fmtD(r.created_at)}</td>`:""}</tr>`).join("")+"</tbody>";
+}
+function fillSections(sel,rows){const cur=sel.value;const secs=[...new Set(rows.map(r=>(r.section||"").trim()).filter(Boolean))].sort();sel.innerHTML='<option value="">All sections</option>'+secs.map(x=>`<option${x===cur?" selected":""}>${esc(x)}</option>`).join("")}
+let LB=[],TR=[];
+async function loadBoard(){
+  const st=$("#lbStatus");
+  if(!DB_ON){$("#lbTable").innerHTML="";st.textContent="The leaderboard is not connected yet. Your teacher needs to add the Supabase settings.";return}
+  st.textContent="Loading…";
+  try{LB=await fetchScores();fillSections($("#lbSec"),LB);drawBoard();st.textContent="Updated "+new Date().toLocaleTimeString()}
+  catch(e){st.textContent="Could not load the leaderboard. Check the internet connection, then press Refresh."}
+}
+function drawBoard(){const sec=$("#lbSec").value;$("#lbTable").innerHTML=boardHTML(bestPer(LB.filter(r=>!sec||(r.section||"").trim()===sec)),false)}
+$("#lbSec").onchange=drawBoard;$("#lbRefresh").onclick=loadBoard;
+// ---------- teacher ----------
+let unlocked=false;try{unlocked=sessionStorage.getItem("tbb_t")==="1"}catch(e){}
+function tryPin(){if($("#pinIn").value===CONFIG.TEACHER_PIN){unlocked=true;try{sessionStorage.setItem("tbb_t","1")}catch(e){}$("#pinIn").value="";$("#pinErr").hidden=true;showTeacher()}else{$("#pinErr").hidden=false;$("#pinIn").select()}}
+$("#pinBtn").onclick=tryPin;$("#pinIn").addEventListener("keydown",e=>{if(e.key==="Enter")tryPin()});
+$("#tLock").onclick=()=>{unlocked=false;try{sessionStorage.removeItem("tbb_t")}catch(e){}showTeacher()};
+function showTeacher(){$("#gate").hidden=unlocked;$("#tview").hidden=!unlocked;if(unlocked)loadTeacher();else setTimeout(()=>$("#pinIn").focus(),30)}
+function tRows(){
+  const sec=$("#tSec").value,q=$("#tSearch").value.trim().toLowerCase();
+  let rows=TR.filter(r=>(!sec||(r.section||"").trim()===sec)&&(!q||(r.name||"").toLowerCase().includes(q)));
+  return $("#tMode").value==="best"?bestPer(rows):rows;
+}
+function drawTeacher(){
+  const rows=tRows();$("#tTable").innerHTML=boardHTML(rows,true);
+  const sec=$("#tSec").value;const pool=TR.filter(r=>!sec||(r.section||"").trim()===sec);const best=bestPer(pool);
+  const avg=best.length?fmtS(Math.round(best.reduce((a,r)=>a+(+r.score),0)/best.length*10)/10):0;
+  const full=best.filter(r=>r.measured===10).length;
+  $("#tStats").innerHTML=`<div><b>${best.length}</b><span>Students</span></div><div><b>${pool.length}</b><span>Games submitted</span></div><div><b>${avg}</b><span>Average best score</span></div><div><b>${full}</b><span>Measured all 10</span></div>`;
+}
+async function loadTeacher(){
+  const st=$("#tStatus");
+  if(!DB_ON){st.textContent="Not connected. Add SUPABASE_URL and SUPABASE_KEY in the settings at the top of the script.";$("#tTable").innerHTML="";$("#tStats").innerHTML="";return}
+  st.textContent="Loading…";
+  try{TR=await fetchScores();fillSections($("#tSec"),TR);drawTeacher();st.textContent="Updated "+new Date().toLocaleTimeString()+" · refreshes every 20 seconds"}
+  catch(e){st.textContent="Could not load scores. Check the internet connection and the Supabase settings."}
+}
+["#tSec","#tMode"].forEach(q=>$(q).onchange=drawTeacher);$("#tSearch").oninput=drawTeacher;$("#tRefresh").onclick=loadTeacher;
+setInterval(()=>{if(!$("#viewTeacher").hidden&&unlocked)loadTeacher();if(!$("#viewBoard").hidden)loadBoard()},20000);
+function tableData(){const rows=tRows();const all=$("#tMode").value==="all";
+  const head=["Rank","Name","Section","Points","Time (m:ss)","Time (s)","Measured","Procedure errors",all?"":"Games","Played"].filter(Boolean);
+  return [head,...rows.map((r,i)=>[i+1,r.name,r.section,r.score,fmtT(r.time_ms),Math.round(r.time_ms/1000),r.measured,r.errors,...(all?[]:[r.games]),new Date(r.created_at).toLocaleString()])]}
+$("#tCopy").onclick=async()=>{const tsv=tableData().map(r=>r.join("\t")).join("\n");try{await navigator.clipboard.writeText(tsv);toast("Copied. Paste it into Excel or Google Sheets.")}catch(e){toast("Copy was blocked by the browser. Use Download CSV instead.")}};
+$("#tCsv").onclick=()=>{const csv=tableData().map(r=>r.map(c=>{c=String(c??"");return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c}).join(",")).join("\r\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv"}));a.download="triple-beam-scores-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)};
+// ---------- demo ----------
+function enterDemo(){
+  G.demo=true;G.t0=0;G.res={};G.pen=0;$("#scorebar").hidden=true;$("#demobar").hidden=false;$("#startOv").hidden=true;$("#resOv").hidden=true;
+  S.obj=null;S.a=S.b=S.c=0;S.offset=newOffset();S.checked=false;clearForm();renderGame();update();
+}
+function exitDemo(){G.demo=false;$("#demobar").hidden=true;S.obj=null;S.a=S.b=S.c=0;S.offset=newOffset();clearForm();update()}
+$("#demoReveal").onchange=()=>update();
+// ---------- views ----------
+let curView=null;
+function route(arg){
+  const h=typeof arg==="string"?arg:location.hash.slice(1);curView=h;
+  const v=h==="leaderboard"?"leaderboard":h==="teacher"?"teacher":"sim";
+  $("#viewSim").hidden=v!=="sim";$("#viewBoard").hidden=v!=="leaderboard";$("#viewTeacher").hidden=v!=="teacher";
+  document.querySelectorAll("nav.views a").forEach(a=>a.setAttribute("aria-current",a.dataset.view===v?"page":"false"));
+  $("#resOv").hidden=true;
+  if(h==="demo"){if(!unlocked){go("teacher");return}enterDemo()}
+  else if(G.demo)exitDemo();
+  if(v==="sim"&&!G.demo&&!G.t0){$("#cancelBtn").hidden=true;$("#startBtn").textContent="Start";$("#startOv").hidden=false;setTimeout(()=>{try{$("#stName").focus()}catch(e){}},30)}
+  else $("#startOv").hidden=true;
+  if(v==="leaderboard")loadBoard();
+  if(v==="teacher")showTeacher();
+}
+window.addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(h!==curView)route(h)});
+// switch views directly, so in-page links work even where the viewer blocks link navigation
+function go(v){try{history.replaceState(null,"",v?"#"+v:location.pathname+location.search)}catch(e){}route(v)}
+document.addEventListener("click",e=>{const a=e.target.closest&&e.target.closest('a[href^="#"]');if(!a)return;e.preventDefault();go(a.getAttribute("href").slice(1))});
+$("#finishBtn").onclick=showResults;
+$("#resBack").onclick=()=>{$("#resOv").hidden=true;if(!G.over)G.t1=0};
+$("#resBoard").onclick=()=>{$("#resOv").hidden=true};
+$("#resAgain").onclick=()=>{$("#resOv").hidden=true;$("#shuffleBtn").click()};
+setInterval(()=>{if(G.t0)$("#sbTime").textContent=fmtT((G.t1||Date.now())-G.t0)},500);
+
+// readings
+const ins=["in100","in10","in01","inTot"].map(id=>$("#"+id));
+function clearForm(){ins.forEach(i=>{i.value="";i.className=""});$("#fb").textContent="";$("#fb").className="fb";$("#sumLine").textContent=""}
+ins.forEach(i=>i.addEventListener("input",()=>{S.checked=false;i.className="";const v=ins.slice(0,3).map(x=>parseFloat(x.value));if(v.every(n=>!isNaN(n)))$("#sumLine").textContent=`${v[0]} + ${v[1]} + ${v[2]} = ${(v[0]+v[1]+v[2]).toFixed(1)} g`;else $("#sumLine").textContent="";update()}));
+$("#checkBtn").onclick=()=>{
+  const fb=$("#fb");
+  if(!S.obj){fb.className="fb no";fb.textContent="Place an object on the pan first.";return}
+  const v=ins.map(x=>parseFloat(x.value));
+  const ok100=v[0]===S.a*100, ok10=v[1]===S.b*10, ok01=!isNaN(v[2])&&Math.abs(v[2]*100-S.c)<=5;
+  const net=netU();const balanced=Math.abs(net)<=4;
+  const okTot=!isNaN(v[3])&&Math.abs(v[3]*100-S.obj.mass)<=1;
+  [[ins[0],ok100],[ins[1],ok10],[ins[2],ok01],[ins[3],okTot]].forEach(([i,o])=>i.className=o?"good":"bad");
+  const r=G.res[S.obj.id]=G.res[S.obj.id]||{tries:0,done:false,pts:0};
+  const scoring=G.t0&&!G.over&&!r.done;
+  if(scoring&&!isNaN(v[3]))r.tries++;
+  if(okTot&&balanced&&S.offset===0){S.checked=true;fb.className="fb ok";
+    let extra="";
+    if(scoring){r.done=true;r.pts=1;extra=" +1 point."}
+    else if(r.done)extra=" Already scored.";
+    fb.textContent=`Correct. The ${S.obj.name.toLowerCase()} has a mass of ${(S.obj.mass/100).toFixed(1)} g.${extra} Return the riders to 0, then remove it.`;
+    renderGame();
+    if(scoring&&Object.values(G.res).filter(x=>x.done).length===SPECS.length){G.over=true;G.t1=Date.now();setTimeout(()=>{showResults();submitScore()},900)}
+  }
+  else{
+    renderGame();
+    S.checked=false;fb.className="fb no";
+    if(S.offset!==0)fb.textContent="The balance was not calibrated, so every reading is off. Remove the object and redo Step 1.";
+    else if(!balanced)fb.textContent="The pointer is not on the zero mark yet. Finish Steps 3 to 5 first.";
+    else if(!(ok100&&ok10&&ok01))fb.textContent="Re-read the beams. A red box means that beam reading does not match where its rider sits.";
+    else fb.textContent="Your beam readings are right. Check your addition.";
+  }
+  update();
+};
+
+// steps
+const STEPS=[
+  ["Calibrate the balance","Empty the pan and slide all three riders to their left-most positions. Twist the adjustment knob until the pointer lines up with the fixed zero mark."],
+  ["Place the object","Put the object to be weighed on the center of the pan."],
+  ["Center beam · 100 g rider","Slide the 100 g rider right one notch at a time. Once the pointer drops below zero, slide it back one notch to the left."],
+  ["Rear beam · 10 g rider","Slide the 10 g rider right one notch at a time. Once the pointer drops below zero, slide it back one notch."],
+  ["Front beam · 0.1 g rider","This beam has no notches. Slide the rider slowly and watch the pointer. Stop when the pointer is in line with the zero mark."],
+  ["Add the readings","Add the values of the three beams to get the mass. Then return the riders to their original position before removing the object."]
+];
+const stepsEl=$("#steps");
+STEPS.forEach((s,i)=>{const li=document.createElement("li");li.innerHTML=`<span class="sn">${String(i+1)}</span><div><div class="st">${s[0]}</div><div class="sd">${s[1]}</div><div class="hint" hidden></div></div>`;stepsEl.appendChild(li)});
+
+let view=0,lastCur=0,lastD=[],lastCurV=0,lastHint="";
+const pips=document.getElementById("pips");
+for(let i=0;i<6;i++){const b=document.createElement("span");pips.appendChild(b)}
+function renderSteps(){
+  const d=lastD,cur=lastCurV;
+  [...stepsEl.children].forEach((li,i)=>{li.className=d[i]?"done":i===cur?"current":"";li.hidden=i!==view;const h=li.querySelector(".hint");h.hidden=i!==cur;h.textContent=lastHint;
+    let tag=li.querySelector(".tag");if(!tag){tag=document.createElement("div");tag.className="tag";li.querySelector("div").prepend(tag)}
+    tag.textContent=d[i]?"Done":i===cur?"Do this now":"Not yet";});
+  [...pips.children].forEach((p,i)=>p.className=(d[i]?"done ":"")+(i===cur?"cur ":"")+(i===view?"view":""));
+  document.getElementById("stepCount").textContent=`Step ${view+1} of 6`;
+  document.getElementById("stepPrev").disabled=view===0;
+  document.getElementById("stepNext").disabled=view===5;
+}
+document.getElementById("stepPrev").onclick=()=>{view=Math.max(0,view-1);renderSteps()};
+document.getElementById("stepNext").onclick=()=>{view=Math.min(5,view+1);renderSteps()};
+function netU(){return (S.obj?S.obj.mass:0)+S.offset-(S.a*10000+S.b*1000+S.c)}
+function evalSteps(){
+  const eff=(S.obj?S.obj.mass:0)+S.offset;
+  const cA=Math.min(5,Math.floor(eff/10000)),cB=Math.min(10,Math.floor((eff-S.a*10000)/1000));
+  const d=[];
+  d[0]=S.offset===0;
+  d[1]=d[0]&&!!S.obj;
+  d[2]=d[1]&&S.a===cA;
+  d[3]=d[2]&&S.b===cB;
+  d[4]=d[3]&&Math.abs(netU())<=4;
+  d[5]=d[4]&&S.checked;
+  const cur=d.indexOf(false);
+  let hint="";const net=netU();
+  if(cur===0){
+    if(S.obj)hint="Remove the object. Calibration is done with an empty pan.";
+    else if(S.a||S.b||S.c)hint="Slide all three riders back to 0 first.";
+    else hint=S.offset>0?"Pointer is above zero. Turn the knob left.":"Pointer is below zero. Turn the knob right.";
+  }else if(cur===1)hint="Choose a specimen from the dropdown, then press Place.";
+  else if(cur===2)hint=S.a>cA?"Pointer is below zero. Slide the 100 g rider back one notch.":"Pointer is still above zero. Move one more notch right.";
+  else if(cur===3)hint=S.b>cB?"Pointer is below zero. Slide the 10 g rider back one notch.":"Pointer is still above zero. Move one more notch right.";
+  else if(cur===4)hint=net>0?"Pointer is above zero. Slide the front rider a little to the right.":"Pointer is below zero. Slide the front rider a little to the left.";
+  else if(cur===5)hint="Write each beam reading and their sum, then press Check reading.";
+  return {d,cur,hint};
+}
+
+function update(){
+  Object.keys(R).forEach(k=>{R[k].setAttribute("transform",`translate(${riderX[k](S[k])} ${BY[k]})`);R[k].setAttribute("aria-valuenow",k==="c"?S.c/100:S[k]*(k==="a"?100:10))});
+  objG.innerHTML=S.obj?objSVG(S.obj.id):"";
+  knobLines.innerHTML="";
+  for(let i=0;i<6;i++){const x=83+((i*5+knobTurn/4)%27+27)%27;el("line",{x1:x,y1:221,x2:x,y2:239,stroke:css("steel"),"stroke-width":1},knobLines)}
+  renderTray();
+  const {d,cur,hint}=evalSteps();
+  if(cur!==lastCur){view=cur<0?5:cur;lastCur=cur}
+  lastD=d;lastCurV=cur;lastHint=hint;renderSteps();
+  const st=$("#status");
+  if(flash){st.className="status warn";st.innerHTML=`<b>${flash}</b>`;toast(flash);flash="";}
+  else{
+    const net=netU();const pos=Math.abs(net)<=4?"on zero":net>0?"above zero":"below zero";
+    if(G.demo){const dm=document.getElementById("demoMass");if(dm)dm.textContent=$("#demoReveal").checked&&S.obj?`${S.obj.name}: ${(S.obj.mass/100).toFixed(1)} g`:""}
+    st.className="status";st.innerHTML=`Pan: <b>${S.obj?S.obj.name:"empty"}</b> · Pointer: <b>${pos}</b>${cur>=0?` · Next: <b>Step ${cur+1}</b>`:" · <b>All steps complete</b>"}`;
+  }
+  $("#removeBtn").disabled=!S.obj;
+}
+
+// magnifier
+const mag=$("#magsvg");
+el("rect",{x:0,y:0,width:170,height:120,fill:css("surface")},mag);
+for(let i=-6;i<=6;i++){const y=60+i*8;el("line",{x1:70,y1:y,x2:i===0?150:100,y2:y,stroke:css("ink"),"stroke-width":i===0?1.6:.7},mag)}
+const mz=el("text",{x:154,y:64,"font-family":"Libre Franklin, Arial, sans-serif","font-size":11,fill:css("ink")},mag);mz.textContent="0";
+const magPtr=el("g",{},mag);
+el("path",{d:"M0 56 L78 59 L78 61 L0 64 Z",fill:css("ink")},magPtr);
+el("path",{d:"M64 55 L86 60 L64 65 Z",fill:css("signal")},magPtr);
+
+// physics loop
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+let last=performance.now();
+function tick(t){
+  const dt=Math.min(.033,(t-last)/1000);last=t;
+  const target=-MAXA*Math.tanh(netU()/350);
+  if(reduce){S.theta=target;S.vel=0}
+  else{const acc=-55*(S.theta-target)-6*S.vel;S.vel+=acc*dt;S.theta+=S.vel*dt}
+  $("#beamGroup").setAttribute("transform",`rotate(${S.theta.toFixed(4)} ${PIV.x} ${PIV.y})`);
+  panInner.setAttribute("transform",`rotate(${(-S.theta).toFixed(4)} 150 230)`);
+  const tipDy=(910-PIV.x)*Math.sin(S.theta*Math.PI/180);
+  const md=Math.max(-50,Math.min(50,tipDy*10));
+  magPtr.setAttribute("transform",`translate(0 ${md.toFixed(2)})`);
+  requestAnimationFrame(tick);
+}
+
+// start/results screens replace the balance instead of covering it
+(function(){
+  const sim=document.getElementById("viewSim"),so=document.getElementById("startOv"),ro=document.getElementById("resOv");
+  const parts=[sim.querySelector(".bench"),sim.querySelector(".grid")];
+  function sync(){const on=!so.hidden||!ro.hidden;parts.forEach(e=>e.hidden=on);if(on){try{window.scrollTo(0,0)}catch(e){}}}
+  new MutationObserver(sync).observe(so,{attributes:true,attributeFilter:["hidden"]});
+  new MutationObserver(sync).observe(ro,{attributes:true,attributeFilter:["hidden"]});
+  sync();
+})();
+renderGame();update();requestAnimationFrame(tick);route();
+})();
+</script>
+
+</body>
+</html>
