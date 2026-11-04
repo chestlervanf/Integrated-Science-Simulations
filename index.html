@@ -36,7 +36,12 @@ h1{font-family:var(--display);font-weight:600;font-size:clamp(28px,4vw,38px);lin
 .lede{max-width:52ch;color:var(--muted);margin:0;font-size:14px}
 .bench{border-bottom:1px solid var(--rule)}
 .bench-in{padding-block:4px 0}
-#bal{width:100%;height:auto;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+#bal{width:calc(var(--z,1) * 100%);max-width:none;height:auto;display:block;touch-action:pan-x pan-y pinch-zoom;user-select:none;-webkit-user-select:none}
+#bal .rider{touch-action:none}
+.balwrap{overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.zoombar{display:flex;justify-content:flex-end;align-items:center;gap:4px;padding-top:8px;font-size:12.5px;color:var(--muted)}
+.zoombar output{min-width:5ch;text-align:center;font-variant-numeric:tabular-nums;color:var(--ink)}
+.zoombar .hintz{margin-right:auto}
 .status{font-size:13.5px;padding:8px 0 10px;color:var(--muted);min-height:2.4em}
 .status b{color:var(--ink);font-weight:600}
 .status.warn b{color:var(--warn)}
@@ -214,6 +219,15 @@ footer{margin-top:44px;font-size:12px;color:var(--muted);border-top:1px solid va
     </div>
   </div>
   <div class="bench"><div class="bench-in">
+    <div class="zoombar">
+      <span class="hintz" id="zoomHint" hidden>Swipe sideways to see the whole balance.</span>
+      <span>Zoom</span>
+      <button type="button" class="btn sm" id="zoomOut" aria-label="Zoom out">−</button>
+      <output id="zoomVal">100%</output>
+      <button type="button" class="btn sm" id="zoomIn" aria-label="Zoom in">+</button>
+      <button type="button" class="btn sm ghost" id="zoomFit">Fit</button>
+    </div>
+    <div class="balwrap" id="balwrap">
     <svg id="bal" viewBox="0 50 960 352" role="img" aria-label="Triple beam balance">
       <g id="fixedBack"></g>
       <g id="beamGroup">
@@ -223,6 +237,7 @@ footer{margin-top:44px;font-size:12px;color:var(--muted);border-top:1px solid va
       </g>
       <g id="fixedFront"></g>
     </svg>
+    </div>
     <div class="status" id="status" aria-live="polite"></div>
     <div class="bar">
       <div class="controls">
@@ -839,6 +854,30 @@ function tick(t){
   new MutationObserver(sync).observe(so,{attributes:true,attributeFilter:["hidden"]});
   new MutationObserver(sync).observe(ro,{attributes:true,attributeFilter:["hidden"]});
   sync();
+})();
+// ---------- zoom ----------
+(function(){
+  const Z=[1,1.5,2,2.5,3];let zi=0;
+  const wrap=document.getElementById("balwrap");
+  // zoom keeps the left edge of the view fixed; the first step in starts at the beams' zero end
+  function setZoom(i,leftFrac){
+    zi=Math.max(0,Math.min(Z.length-1,i));const z=Z[zi];
+    const lf=leftFrac!=null?leftFrac:wrap.scrollLeft/(wrap.scrollWidth||1);
+    svg.style.setProperty("--z",z);
+    document.getElementById("zoomVal").textContent=Math.round(z*100)+"%";
+    document.getElementById("zoomOut").disabled=zi===0;document.getElementById("zoomIn").disabled=zi===Z.length-1;
+    document.getElementById("zoomHint").hidden=z===1;
+    requestAnimationFrame(()=>{wrap.scrollLeft=lf*wrap.scrollWidth});
+    try{localStorage.setItem("tbb_zoom",String(zi))}catch(e){}
+  }
+  const BEAM0=0.33;
+  document.getElementById("zoomIn").onclick=()=>setZoom(zi+1,zi===0?BEAM0:null);
+  document.getElementById("zoomOut").onclick=()=>setZoom(zi-1);
+  document.getElementById("zoomFit").onclick=()=>setZoom(0,0);
+  // iOS ignores touch-action on SVG children, so stop page scrolling while a rider is dragged
+  Object.values(R).forEach(g=>g.addEventListener("touchmove",e=>e.preventDefault(),{passive:false}));
+  let saved=0;try{saved=+localStorage.getItem("tbb_zoom")||0}catch(e){}
+  setZoom(saved,saved?BEAM0:0);
 })();
 renderGame();update();requestAnimationFrame(tick);route();
 })();
