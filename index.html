@@ -119,6 +119,8 @@ table.card th{text-align:left;font-weight:500;color:var(--muted);font-size:12px;
 table.card td{padding:6px 6px 6px 0;border-bottom:1px solid var(--line)}
 table.card th:nth-child(n+2),table.card td:nth-child(n+2){text-align:right}
 table.card tr.ok td:first-child::before{content:"✓ ";color:var(--ok)}
+table.card tr.bad td:first-child::before{content:"✗ ";color:var(--signal)}
+table.card tr.bad td:nth-child(2){color:var(--signal)}
 table.card tfoot td{color:var(--muted);font-size:12.5px;border-bottom:0}
 .rules{font-size:12.5px;color:var(--muted);margin:10px 0 0;max-width:60ch}
 .ov{display:grid;justify-items:center;padding-block:32px 48px}
@@ -222,7 +224,7 @@ footer{margin-top:44px;font-size:12px;color:var(--muted);border-top:1px solid va
       <p class="ovsub" id="resSec"></p>
       <div class="big"><span id="resScore">0</span><small> / 10 points</small></div>
       <p class="ovsub" id="resMeta"></p>
-      <table class="card"><thead><tr><th>Specimen</th><th>Mass (g)</th><th>Tries</th><th>Points</th></tr></thead><tbody id="resBody"></tbody></table>
+      <table class="card"><thead><tr><th>Specimen</th><th>Your reading (g)</th><th>Actual (g)</th><th>Points</th></tr></thead><tbody id="resBody"></tbody></table>
       <p class="ovsmall" id="saveStatus"></p>
       <div class="row"><button type="button" class="btn primary" id="submitBtn">Submit score</button><button type="button" class="btn" id="resBack">Back to balance</button><button type="button" class="btn" id="resAgain">Play again</button><a class="btn" href="#leaderboard" id="resBoard">Leaderboard</a></div>
     </div>
@@ -294,7 +296,7 @@ footer{margin-top:44px;font-size:12px;color:var(--muted);border-top:1px solid va
           <label>Front beam<input id="in01" inputmode="decimal" autocomplete="off" placeholder="e.g. 6.3"></label>
           <div class="total">
             <label>Mass of object (sum)<input id="inTot" inputmode="decimal" autocomplete="off" placeholder="e.g. 246.3"></label>
-            <button class="btn primary" id="checkBtn">Check reading</button>
+            <button class="btn primary" id="checkBtn">Submit reading</button>
           </div>
         </div>
         <div class="sum" id="sumLine"></div>
@@ -302,9 +304,9 @@ footer{margin-top:44px;font-size:12px;color:var(--muted);border-top:1px solid va
       </div>
       <div>
         <p class="label">Scorecard</p>
-        <table class="card"><thead><tr><th>Specimen</th><th>Mass (g)</th><th>Tries</th><th>Points</th></tr></thead><tbody id="cardBody"></tbody>
+        <table class="card"><thead><tr><th>Specimen</th><th>Your reading (g)</th><th>Actual (g)</th><th>Points</th></tr></thead><tbody id="cardBody"></tbody>
         <tfoot><tr><td colspan="3">Procedure errors <span id="penN">0</span> × −0.5</td><td id="penPts">0</td></tr></tfoot></table>
-        <p class="rules">1 point for each specimen measured correctly. Removing an object before returning the riders, or weighing on an uncalibrated balance, costs 0.5 point.</p>
+        <p class="rules">Each specimen gets one submission: 1 point if your reading is correct, 0 if it is wrong. Removing an object before returning the riders, or weighing on an uncalibrated balance, costs 0.5 point.</p>
       </div>
     </section>
   </div>
@@ -567,7 +569,7 @@ function objSVG(id){
 // specimen dropdown
 const sel=$("#specSel");
 SPECS.forEach(sp=>{const o=document.createElement("option");o.value=sp.id;sel.appendChild(o)});
-function renderTray(){[...sel.options].forEach((o,i)=>o.textContent=(G.res[SPECS[i].id]&&G.res[SPECS[i].id].done?"✓ ":"")+SPECS[i].name+(S.obj&&S.obj.id===SPECS[i].id?" (on pan)":""));$("#placeBtn").disabled=!!(S.obj&&S.obj.id===sel.value)}
+function renderTray(){[...sel.options].forEach((o,i)=>o.textContent=(G.res[SPECS[i].id]&&G.res[SPECS[i].id].done?(G.res[SPECS[i].id].pts?"✓ ":"✗ "):"")+SPECS[i].name+(S.obj&&S.obj.id===SPECS[i].id?" (on pan)":""));$("#placeBtn").disabled=!!(S.obj&&S.obj.id===sel.value)}
 sel.addEventListener("change",renderTray);
 $("#placeBtn").onclick=()=>placeObj(SPECS.find(x=>x.id===sel.value));
 let flash="";
@@ -591,7 +593,7 @@ function penalty(key,msg){if(!G.t0||G.over||!S.obj)return;S.obj.pen=S.obj.pen||{
 function score(){let t=0;for(const k in G.res)if(G.res[k].done)t+=G.res[k].pts;return Math.max(0,Math.round((t-G.pen*0.5)*10)/10)}
 const fmtS=x=>Number.isInteger(+x)?String(+x):(+x).toFixed(1);
 function fmtT(ms){const s=Math.floor(ms/1000);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
-function rows(){return SPECS.map(sp=>{const r=G.res[sp.id]||{tries:0};return `<tr class="${r.done?"ok":""}"><td>${sp.name}</td><td>${r.done?(sp.mass/100).toFixed(1):"—"}</td><td>${r.tries||"—"}</td><td>${r.done?r.pts:"—"}</td></tr>`}).join("")}
+function rows(){return SPECS.map(sp=>{const r=G.res[sp.id]||{};return `<tr class="${r.done?(r.pts?"ok":"bad"):""}"><td>${sp.name}</td><td>${r.done?r.ans.toFixed(1):"—"}</td><td>${r.done?(sp.mass/100).toFixed(1):"—"}</td><td>${r.done?r.pts:"—"}</td></tr>`}).join("")}
 function renderGame(){
   const n=Object.values(G.res).filter(r=>r.done).length;
   $("#sbName").textContent=G.name;$("#sbScore").textContent=fmtS(score());$("#sbDone").textContent=n;
@@ -630,7 +632,7 @@ async function submitScore(){
   if(!DB_ON||G.saved||G.saving||!G.t0||G.demo)return;
   if(!G.t1)G.t1=Date.now();G.over=true;G.saving=true;G.saveErr="";renderSave();
   const measured=Object.values(G.res).filter(r=>r.done).length;
-  const details=SPECS.map(sp=>{const r=G.res[sp.id]||{};return{s:sp.name,m:r.done?sp.mass/100:null,t:r.tries||0,p:r.done?r.pts:0}});
+  const details=SPECS.map(sp=>{const r=G.res[sp.id]||{};return{s:sp.name,m:sp.mass/100,a:r.done?r.ans:null,p:r.done?r.pts:0}});
   const row={name:G.name.slice(0,40),section:(G.sec||"").slice(0,30),score:score(),time_ms:Math.round(G.t1-G.t0),measured,errors:G.pen,details};
   try{
     const r=await fetch(API(),{method:"POST",headers:Object.assign(sbHeaders(),{"Prefer":"return=minimal"}),body:JSON.stringify(row)});
@@ -782,28 +784,33 @@ $("#checkBtn").onclick=()=>{
   const fb=$("#fb");
   if(!S.obj){fb.className="fb no";fb.textContent="Place an object on the pan first.";return}
   const v=ins.map(x=>parseFloat(x.value));
-  const ok100=v[0]===S.a*100, ok10=v[1]===S.b*10, ok01=!isNaN(v[2])&&Math.abs(v[2]*100-S.c)<=5;
+  if(v.some(isNaN)){fb.className="fb no";fb.textContent="Fill in all three beam readings and the total first.";ins.forEach((x,i)=>{if(isNaN(v[i]))x.className="bad"});return}
+  const ok100=v[0]===S.a*100, ok10=v[1]===S.b*10, ok01=Math.abs(v[2]*100-S.c)<=5;
   const net=netU();const balanced=Math.abs(net)<=4;
-  const okTot=!isNaN(v[3])&&Math.abs(v[3]*100-S.obj.mass)<=1;
-  [[ins[0],ok100],[ins[1],ok10],[ins[2],ok01],[ins[3],okTot]].forEach(([i,o])=>i.className=o?"good":"bad");
-  const r=G.res[S.obj.id]=G.res[S.obj.id]||{tries:0,done:false,pts:0};
-  const scoring=G.t0&&!G.over&&!r.done;
-  if(scoring&&!isNaN(v[3]))r.tries++;
-  if(okTot&&balanced&&S.offset===0){S.checked=true;fb.className="fb ok";
-    let extra="";
-    if(scoring){r.done=true;r.pts=1;extra=" +1 point."}
-    else if(r.done)extra=" Already scored.";
-    fb.textContent=`Correct. The ${S.obj.name.toLowerCase()} has a mass of ${(S.obj.mass/100).toFixed(1)} g.${extra} Return the riders to 0, then remove it.`;
-    renderGame();
-    if(scoring&&Object.values(G.res).filter(x=>x.done).length===SPECS.length){G.over=true;G.t1=Date.now();setTimeout(()=>{showResults();submitScore()},900)}
+  const okTot=Math.abs(v[3]*100-S.obj.mass)<=1;
+  const mass=(S.obj.mass/100).toFixed(1);
+  const r=G.res[S.obj.id]=G.res[S.obj.id]||{done:false,pts:0};
+  const scoring=G.t0&&!G.over&&!G.demo;
+  if(scoring&&r.done){
+    fb.className="fb no";fb.textContent=`You already submitted the ${S.obj.name.toLowerCase()} (${r.pts?"correct":"wrong"}). Return the riders to 0, remove it, and weigh the next specimen.`;return;
   }
-  else{
+  [[ins[0],ok100],[ins[1],ok10],[ins[2],ok01],[ins[3],okTot]].forEach(([i,o])=>i.className=o?"good":"bad");
+  if(scoring){
+    // one submission per specimen: graded against the true mass
+    r.done=true;r.ans=Math.round(v[3]*10)/10;r.pts=okTot?1:0;S.checked=true;
+    if(okTot){fb.className="fb ok";fb.textContent=`Correct. +1 point. Return the riders to 0, then remove the ${S.obj.name.toLowerCase()}.`}
+    else{fb.className="fb no";fb.textContent=`Wrong. You recorded ${r.ans.toFixed(1)} g; the actual mass is ${mass} g. 0 points. Return the riders to 0, then remove it.`}
     renderGame();
-    S.checked=false;fb.className="fb no";
-    if(S.offset!==0)fb.textContent="The balance was not calibrated, so every reading is off. Remove the object and redo Step 1.";
-    else if(!balanced)fb.textContent="The pointer is not on the zero mark yet. Finish Steps 3 to 5 first.";
-    else if(!(ok100&&ok10&&ok01))fb.textContent="Re-read the beams. A red box means that beam reading does not match where its rider sits.";
-    else fb.textContent="Your beam readings are right. Check your addition.";
+    if(Object.values(G.res).filter(x=>x.done).length===SPECS.length){G.over=true;G.t1=Date.now();setTimeout(()=>{showResults();submitScore()},1200)}
+  }else{
+    // demo or finished game: explain, allow retries
+    S.checked=okTot;
+    if(okTot){fb.className="fb ok";fb.textContent=`Correct. The ${S.obj.name.toLowerCase()} has a mass of ${mass} g.`}
+    else{fb.className="fb no";
+      if(S.offset!==0)fb.textContent="The balance was not calibrated, so every reading is off. Remove the object and redo Step 1.";
+      else if(!balanced)fb.textContent="The pointer is not on the zero mark yet. Finish Steps 3 to 5 first.";
+      else if(!(ok100&&ok10&&ok01))fb.textContent="Re-read the beams. A red box means that beam reading does not match where its rider sits.";
+      else fb.textContent="Your beam readings are right. Check your addition.";}
   }
   update();
 };
@@ -856,7 +863,7 @@ function evalSteps(){
   else if(cur===2)hint=S.a>cA?"Pointer is below zero. Slide the 100 g rider back one notch.":"Pointer is still above zero. Move one more notch right.";
   else if(cur===3)hint=S.b>cB?"Pointer is below zero. Slide the 10 g rider back one notch.":"Pointer is still above zero. Move one more notch right.";
   else if(cur===4)hint=net>0?"Pointer is above zero. Slide the front rider a little to the right.":"Pointer is below zero. Slide the front rider a little to the left.";
-  else if(cur===5)hint="Write each beam reading and their sum, then press Check reading.";
+  else if(cur===5)hint="Write each beam reading and their sum, then press Submit reading. You only get one submission per specimen.";
   return {d,cur,hint};
 }
 
