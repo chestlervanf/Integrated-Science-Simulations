@@ -91,7 +91,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
 .btn.sm{font-size:12.5px;padding:2px 9px;min-height:30px;min-width:32px}
 .btn.ghost{border-color:var(--line)}
 select{font:inherit;font-size:13px;padding:4px 26px 4px 8px;min-height:30px;border:1px solid var(--ink);border-radius:0;background:var(--surface);color:var(--ink);max-width:100%}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));max-width:min(560px,calc(100% - 32px));background:var(--ink);color:var(--bg);font-size:13.5px;padding:10px 14px;z-index:20}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(64px + env(safe-area-inset-bottom,0px));max-width:min(560px,calc(100% - 32px));background:var(--ink);color:var(--bg);font-size:13.5px;padding:10px 14px;z-index:20}
 .hit{cursor:help}
 .hit:hover{stroke:var(--signal);stroke-width:1;stroke-dasharray:3 2}
 g.rider:hover rect:last-of-type{stroke:var(--signal)}
@@ -137,6 +137,10 @@ nav.views{display:flex;gap:4px;flex-wrap:wrap}
 nav.views a{font-size:13.5px;color:var(--muted);text-decoration:none;padding:5px 10px;border:1px solid transparent}
 nav.views a:hover{color:var(--ink)}
 nav.views a[aria-current="page"]{color:var(--ink);border-color:var(--ink)}
+.themebtn{position:fixed;z-index:25;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);display:grid;place-items:center;cursor:pointer;padding:0;opacity:.85}
+.themebtn:hover{opacity:1;border-color:var(--ink)}
+.themebtn svg{width:18px;height:18px;display:block}
+.wrap{padding-bottom:72px}
 #viewSim .scorebar{padding-block:10px;border-bottom:1px solid var(--line)}
 .demobar{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;font-size:14px;padding-block:10px;border-bottom:1px solid var(--line)}
 .demobar b{color:var(--signal);font-weight:600}
@@ -164,6 +168,12 @@ table.lb th:nth-child(2),table.lb td:nth-child(2),table.lb th:nth-child(3),table
 .stats div{display:grid}
 .stats b{font-family:var(--display);font-size:26px;font-weight:600;line-height:1.1}
 .stats span{font-size:12.5px;color:var(--muted)}
+.delbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:13px;color:var(--muted);padding-block:6px 10px}
+.delbar b{color:var(--signal);font-weight:600}
+.btn.danger{border-color:var(--signal);color:var(--signal)}
+.btn.danger:hover{background:var(--signal);color:var(--bg)}
+table.lb th.ck,table.lb td.ck{width:28px;text-align:left!important;padding-right:4px}
+table.lb input[type=checkbox]{width:16px;height:16px;accent-color:var(--ink);cursor:pointer}
 footer{margin-top:44px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
 @media (max-width:460px){.form{grid-template-columns:1fr}}
 </style>
@@ -201,7 +211,6 @@ footer{margin-top:44px;font-size:12px;color:var(--muted);border-top:1px solid va
       <p class="ovsub">Measure all 10 specimens. Each correct reading earns 1 point.</p>
       <label>Name<input id="stName" required maxlength="40" autocomplete="name"></label>
       <label>Section<input id="stSec" maxlength="30" placeholder="e.g. 7-Gold"></label>
-      <p class="ovsmall">Steps: calibrate, place a specimen, move the riders to zero, record the readings, check. Return the riders to 0 before removing each specimen.</p>
       <p class="ovsmall err" id="stErr" hidden>Enter your name to start.</p>
       <div class="row"><button class="btn primary" type="button" id="startBtn">Start</button><button class="btn" type="button" id="cancelBtn" hidden>Cancel, keep playing</button></div>
     </div>
@@ -332,13 +341,18 @@ footer{margin-top:44px;font-size:12px;color:var(--muted);border-top:1px solid va
         </div>
         <div class="row"><button type="button" class="btn sm" id="tRefresh">Refresh</button><button type="button" class="btn sm" id="tCopy">Copy table</button><button type="button" class="btn sm" id="tCsv">Download CSV</button></div>
       </div>
+      <div class="delbar" id="delBar">
+        <span id="selInfo">Tick games to remove them.</span>
+        <button type="button" class="btn sm" id="delBtn" disabled>Remove selected</button>
+        <span id="delConfirm" hidden><b id="delQ"></b> <button type="button" class="btn sm danger" id="delYes">Yes, remove</button> <button type="button" class="btn sm" id="delNo">Cancel</button></span>
+      </div>
       <div class="tblwrap"><table class="card lb" id="tTable"></table></div>
       <p class="vsub" id="tStatus"></p>
-      <p class="vsub">To delete test or duplicate entries, open the <b>tbb_scores</b> table in your Supabase dashboard (Table Editor).</p>
     </div>
   </section>
   <div class="toast" id="toast" role="status" hidden></div>
   <div class="parttip" id="parttip" hidden></div>
+  <button type="button" class="themebtn" id="themeBtn" aria-label="Switch to dark mode"></button>
   <footer>Capacity 610 g · readability 0.1 g · center beam 0–500 g in 100 g notches · rear beam 0–100 g in 10 g notches · front beam 0–10 g, no notches.</footer>
 </div>
 
@@ -347,7 +361,7 @@ footer{margin-top:44px;font-size:12px;color:var(--muted);border-top:1px solid va
 const CONFIG={
   SUPABASE_URL:"https://rnbacmatfibpwiutgpup.supabase.co",          // e.g. "https://abcdefgh.supabase.co"
   SUPABASE_KEY:"sb_publishable_ErG2BdS33jeCm_kN_AHk9w_Z1Zk2_4f",          // the project's anon / publishable key (safe to share)
-  TEACHER_PIN:"211730"
+  OFFLINE_PIN:"2468"   // only used when Supabase is not connected; the real PIN is checked by Supabase
 };
 /* ============================================================ */
 (function(){
@@ -635,10 +649,11 @@ const key=r=>(r.name||"").trim().toLowerCase()+"|"+(r.section||"").trim().toLowe
 function bestPer(rows){const m=new Map(),n=new Map();for(const r of rows){const k=key(r);n.set(k,(n.get(k)||0)+1);if(!m.has(k))m.set(k,r)}return [...m.values()].map(r=>Object.assign({},r,{games:n.get(key(r))}))}
 const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmtD=iso=>{const d=new Date(iso);return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" "+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})};
+const SEL=new Set();
 function boardHTML(rows,teacher){
   if(!rows.length)return `<tbody><tr><td>No scores yet.</td></tr></tbody>`;
-  const head=`<thead><tr><th>#</th><th>Name</th><th>Section</th><th>Points</th><th>Time</th><th>Measured</th><th>Errors</th>${teacher?"<th>Games</th><th>Played</th>":""}</tr></thead>`;
-  return head+"<tbody>"+rows.map((r,i)=>`<tr class="${i<3?"top":""}"><td class="rk">${i+1}</td><td class="nm">${esc(r.name)}</td><td>${esc(r.section)||"—"}</td><td><b>${fmtS(r.score)}</b></td><td>${fmtT(r.time_ms)}</td><td>${r.measured}/10</td><td>${r.errors}</td>${teacher?`<td>${r.games??1}</td><td>${fmtD(r.created_at)}</td>`:""}</tr>`).join("")+"</tbody>";
+  const head=`<thead><tr>${teacher?'<th class="ck"><input type="checkbox" id="ckAll" aria-label="Select all shown"></th>':""}<th>#</th><th>Name</th><th>Section</th><th>Points</th><th>Time</th><th>Measured</th><th>Errors</th>${teacher?"<th>Games</th><th>Played</th>":""}</tr></thead>`;
+  return head+"<tbody>"+rows.map((r,i)=>`<tr class="${i<3?"top":""}">${teacher?`<td class="ck"><input type="checkbox" class="ckRow" data-id="${r.id}" aria-label="Select ${esc(r.name)}"${SEL.has(r.id)?" checked":""}></td>`:""}<td class="rk">${i+1}</td><td class="nm">${esc(r.name)}</td><td>${esc(r.section)||"—"}</td><td><b>${fmtS(r.score)}</b></td><td>${fmtT(r.time_ms)}</td><td>${r.measured}/10</td><td>${r.errors}</td>${teacher?`<td>${r.games??1}</td><td>${fmtD(r.created_at)}</td>`:""}</tr>`).join("")+"</tbody>";
 }
 function fillSections(sel,rows){const cur=sel.value;const secs=[...new Set(rows.map(r=>(r.section||"").trim()).filter(Boolean))].sort();sel.innerHTML='<option value="">All sections</option>'+secs.map(x=>`<option${x===cur?" selected":""}>${esc(x)}</option>`).join("")}
 let LB=[],TR=[];
@@ -652,10 +667,26 @@ async function loadBoard(){
 function drawBoard(){const sec=$("#lbSec").value;$("#lbTable").innerHTML=boardHTML(bestPer(LB.filter(r=>!sec||(r.section||"").trim()===sec)),false)}
 $("#lbSec").onchange=drawBoard;$("#lbRefresh").onclick=loadBoard;
 // ---------- teacher ----------
-let unlocked=false;try{unlocked=sessionStorage.getItem("tbb_t")==="1"}catch(e){}
-function tryPin(){if($("#pinIn").value===CONFIG.TEACHER_PIN){unlocked=true;try{sessionStorage.setItem("tbb_t","1")}catch(e){}$("#pinIn").value="";$("#pinErr").hidden=true;showTeacher()}else{$("#pinErr").hidden=false;$("#pinIn").select()}}
+let tPin="";try{tPin=sessionStorage.getItem("tbb_pin")||""}catch(e){}
+let unlocked=!!tPin;
+async function rpc(fn,body){
+  const r=await fetch(CONFIG.SUPABASE_URL.replace(/\/+$/,"")+"/rest/v1/rpc/"+fn,{method:"POST",headers:sbHeaders(),body:JSON.stringify(body)});
+  const t=await r.text();let j=null;try{j=t?JSON.parse(t):null}catch(e){}
+  if(!r.ok){const err=new Error((j&&j.message)||("HTTP "+r.status));err.status=r.status;throw err}
+  return j;
+}
+async function tryPin(){
+  const pin=$("#pinIn").value.trim(),err=$("#pinErr");if(!pin)return;
+  $("#pinBtn").disabled=true;err.hidden=true;
+  let ok=false,msg="That PIN is not correct.";
+  if(!DB_ON)ok=pin===CONFIG.OFFLINE_PIN;
+  else{try{ok=(await rpc("tbb_check_pin",{p_pin:pin}))===true}catch(e){msg=e.status===404?"The teacher PIN is not set up in Supabase yet. Run supabase-teacher.sql first.":"Could not reach the server. The teacher view works on your GitHub Pages site."}}
+  $("#pinBtn").disabled=false;
+  if(ok){tPin=pin;unlocked=true;try{sessionStorage.setItem("tbb_pin",pin)}catch(e){}$("#pinIn").value="";showTeacher()}
+  else{err.textContent=msg;err.hidden=false;$("#pinIn").select()}
+}
 $("#pinBtn").onclick=tryPin;$("#pinIn").addEventListener("keydown",e=>{if(e.key==="Enter")tryPin()});
-$("#tLock").onclick=()=>{unlocked=false;try{sessionStorage.removeItem("tbb_t")}catch(e){}showTeacher()};
+$("#tLock").onclick=()=>{unlocked=false;tPin="";try{sessionStorage.removeItem("tbb_pin")}catch(e){}showTeacher()};
 function showTeacher(){$("#gate").hidden=unlocked;$("#tview").hidden=!unlocked;if(unlocked)loadTeacher();else setTimeout(()=>$("#pinIn").focus(),30)}
 function tRows(){
   const sec=$("#tSec").value,q=$("#tSearch").value.trim().toLowerCase();
@@ -663,7 +694,8 @@ function tRows(){
   return $("#tMode").value==="best"?bestPer(rows):rows;
 }
 function drawTeacher(){
-  const rows=tRows();$("#tTable").innerHTML=boardHTML(rows,true);
+  const rows=tRows();const ids=new Set(rows.map(r=>r.id));[...SEL].forEach(id=>{if(!ids.has(id))SEL.delete(id)});
+  $("#tTable").innerHTML=boardHTML(rows,true);syncSel();
   const sec=$("#tSec").value;const pool=TR.filter(r=>!sec||(r.section||"").trim()===sec);const best=bestPer(pool);
   const avg=best.length?fmtS(Math.round(best.reduce((a,r)=>a+(+r.score),0)/best.length*10)/10):0;
   const full=best.filter(r=>r.measured===10).length;
@@ -676,6 +708,32 @@ async function loadTeacher(){
   try{TR=await fetchScores();fillSections($("#tSec"),TR);drawTeacher();st.textContent="Updated "+new Date().toLocaleTimeString()+" · refreshes every 20 seconds"}
   catch(e){st.textContent="Could not load scores. Check the internet connection and the Supabase settings."}
 }
+function syncSel(){
+  const n=SEL.size,shown=[...document.querySelectorAll("#tTable .ckRow")];
+  $("#selInfo").textContent=n?`${n} game${n===1?"":"s"} selected.`:($("#tMode").value==="best"?"Tick a game to remove it. Show “Every submitted game” to remove older tries.":"Tick games to remove them.");
+  $("#delBtn").disabled=!n;$("#delConfirm").hidden=true;$("#delBtn").hidden=false;
+  const all=$("#ckAll");if(all){all.checked=shown.length>0&&shown.every(c=>c.checked);all.indeterminate=!all.checked&&shown.some(c=>c.checked)}
+}
+$("#tTable").addEventListener("change",e=>{
+  const t=e.target;
+  if(t.id==="ckAll"){document.querySelectorAll("#tTable .ckRow").forEach(c=>{c.checked=t.checked;const id=+c.dataset.id;t.checked?SEL.add(id):SEL.delete(id)})}
+  else if(t.classList.contains("ckRow")){const id=+t.dataset.id;t.checked?SEL.add(id):SEL.delete(id)}
+  syncSel();
+});
+$("#delBtn").onclick=()=>{const n=SEL.size;if(!n)return;$("#delQ").textContent=`Remove ${n} game${n===1?"":"s"} for good?`;$("#delBtn").hidden=true;$("#delConfirm").hidden=false};
+$("#delNo").onclick=()=>syncSel();
+$("#delYes").onclick=async()=>{
+  const ids=[...SEL];$("#delYes").disabled=true;
+  try{
+    if(!DB_ON)throw new Error("offline");
+    const n=await rpc("tbb_delete_scores",{p_pin:tPin,p_ids:ids});
+    SEL.clear();toast(`Removed ${n} game${n===1?"":"s"}.`);await loadTeacher();
+  }catch(e){
+    toast(e.status===404?"Removing needs the teacher setup in Supabase. Run supabase-teacher.sql first.":/pin/i.test(e.message)?"Your PIN was not accepted. Lock and open the teacher view again.":"Could not remove. Check the internet connection and try again.");
+    syncSel();
+  }
+  $("#delYes").disabled=false;
+};
 ["#tSec","#tMode"].forEach(q=>$(q).onchange=drawTeacher);$("#tSearch").oninput=drawTeacher;$("#tRefresh").onclick=loadTeacher;
 setInterval(()=>{if(!$("#viewTeacher").hidden&&unlocked)loadTeacher();if(!$("#viewBoard").hidden)loadBoard()},20000);
 function tableData(){const rows=tRows();const all=$("#tMode").value==="all";
@@ -854,6 +912,22 @@ function tick(t){
   new MutationObserver(sync).observe(so,{attributes:true,attributeFilter:["hidden"]});
   new MutationObserver(sync).observe(ro,{attributes:true,attributeFilter:["hidden"]});
   sync();
+})();
+// ---------- light / dark ----------
+(function(){
+  const root=document.documentElement,mq=matchMedia("(prefers-color-scheme: dark)"),btn=document.getElementById("themeBtn");
+  const SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>';
+  const MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 14.6A8.2 8.2 0 0 1 9.4 4a8.2 8.2 0 1 0 10.6 10.6Z"/></svg>';
+  let pick=null;try{pick=localStorage.getItem("tbb_theme")}catch(e){}
+  const isDark=()=>pick?pick==="dark":(root.getAttribute("data-theme")==="dark"||(!root.getAttribute("data-theme")&&mq.matches));
+  function apply(){
+    if(pick)root.setAttribute("data-theme",pick);
+    const d=isDark();btn.innerHTML=d?SUN:MOON;
+    btn.setAttribute("aria-label",d?"Switch to light mode":"Switch to dark mode");btn.title=d?"Light mode":"Dark mode";
+  }
+  btn.onclick=()=>{pick=isDark()?"light":"dark";try{localStorage.setItem("tbb_theme",pick)}catch(e){}apply();update()};
+  mq.addEventListener&&mq.addEventListener("change",apply);
+  apply();
 })();
 // ---------- zoom ----------
 (function(){
